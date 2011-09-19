@@ -45,6 +45,7 @@ Just copy the needed scripts side to your own files.
 	* With mod_wsgi (apache), just name it 'application'
 	* You can use other dummy servers to test:
 
+<pre>
  		from wsgiref.simple_server import make_server
  		httpd = make_server(
  			'localhost', # Host name.
@@ -52,6 +53,7 @@ Just copy the needed scripts side to your own files.
  			application, # application object
  			)
  		httpd.serve_forever()
+</pre>
 
 * Check that it works by opening in a web server
  	http://localhost:8051/MyModule/myFunction?param=value
@@ -62,22 +64,27 @@ Just copy the needed scripts side to your own files.
 * Implement methods like the ones in MyModule by calling
   remoteCall, ie, for 
 
+<pre>
  	class MyModule(ServiceStub.ServiceStub) :
  
  		def myFunction(self, param) :
  			return self.remoteCall( "myFunction", param=param)
+</pre>
 
 * Instantiate the stub in your client code and use it
 
+<pre>
  	service = MyModule("https://mydomain.com:8051/MyModule")
  	service.myFunction(3)
+</pre>
 
 == Goodies ==
 
-=== Parameters ===
+=== Default parameters ===
 
 Any parameter can be set optional by setting a default in 
 the server.
+You can accept any parameter by adding a **kwd parameter.
 
 === Accessing the request object ===
 
@@ -96,10 +103,11 @@ cgi.FieldStorage object.
 By default, the content-type is 'text/plain', if you
 want to change it you can set a content_type property
 on the server function.
-
- 	def myFunction(param) :
- 		return "result: %s"%param
- 	myFunction.content_type = 'text/html'
+<pre>
+ def myFunction(param) :
+ 	return "result: %s"%param
+ myFunction.content_type = 'text/html'
+</pre>
 
 === Forcing HTTP errors ===
 
@@ -109,7 +117,9 @@ Not all errors are defined, you can just subclass it yourself.
 == TO-DO's ==
 
 * Add unit tests for the ServiceStub
-
+* Adding decorators
+* Addding easy to construct response objects
+* Signing client message
 
 
 
