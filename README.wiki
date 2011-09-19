@@ -34,10 +34,11 @@ Just copy the needed scripts side to your own files.
 
 * Setup a module (ie. MyModule.py) with functions and variables
 
-{{{
+<pre>
+ version = "3.2"
  def myFunction(param) :
   	return "result: %s"%param
-}}}
+</pre>
 
 * Create a Service object passing the module name as parameter.
 
