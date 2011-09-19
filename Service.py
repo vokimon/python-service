@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-import bobo
 import webob
 import sys, os
 import decorator
@@ -95,6 +94,14 @@ class Service :
 			request.charset = 'utf8'
 
 		moduleName = request.path_info_pop()
+
+		if moduleName == 'affero' :
+			start_response(
+				status = "200 OK",
+				headers = [ ('Content-Type', 'application/x-python, text/plain') ],
+			)
+			return file(__file__).read()
+
 		if moduleName not in self._modules :
 			raise NotFound("Bad service %s"%moduleName)
 		amodule = __import__(moduleName)
