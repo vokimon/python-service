@@ -3,8 +3,6 @@
 import cgi
 import Service
 
-print "Loading MyService"
-
 
 Version = "0.1"
 Protocol = "ServiceTesting"

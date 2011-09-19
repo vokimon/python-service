@@ -53,11 +53,11 @@ class ServiceTest(unittest.TestCase) :
 		source.write(_serviceCode)
 		source.close()
 		del source
-		def createApp() :
-			import Service
-			return Service.Reload(Service.Service([
-				"TestingService",
-				]))
+		import Service
+		self.app = Service.Reload(Service.Service([
+			"TestingService",
+			]))
+		def createApp() : return self.app
 		wsgi_intercept.urllib2_intercept.install_opener()
 		wsgi_intercept.add_wsgi_intercept('myhost', 80, createApp)
 
@@ -292,13 +292,11 @@ class ServiceTest(unittest.TestCase) :
 			)
 
 	def testReload(self) :
-		# TODO: Does not work, both versions have the same time
 		import time
 		script = "TestingService.py"
-		self.request("TestingService/Function0")
+		self.request("TestingService/Function0").read()
 		creationtime = os.stat(script).st_mtime
-		while True :
-			time.sleep(1)
+		while True : # mtime has just one second of resolution
 			source = open(script,'w')
 			source.write(
 				"print 'Loading'\n"
@@ -306,7 +304,6 @@ class ServiceTest(unittest.TestCase) :
 				)
 			source.close()
 			if os.stat(script).st_mtime != creationtime : break
-		print creationtime, os.stat(script).st_mtime
 
 		self.assertContent(
 			"TestingService/Function0",
