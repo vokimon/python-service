@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 
 import cgi
+import Service
 
 print "Loading MyService"
 
-import Service
 
 Version = "0.1"
 Protocol = "ServiceTesting"
@@ -29,8 +29,5 @@ def forceError(request) :
 	
 def requestless(req, ) :
 	return "Ok '%s'"%b
-
-del Service
-
 
 
