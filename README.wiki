@@ -34,8 +34,10 @@ Just copy the needed scripts side to your own files.
 
 * Setup a module (ie. MyModule.py) with functions and variables
 
+```python
  def myFunction(param) :
   	return "result: %s"%param
+```
 
 * Create a Service object passing the module name as parameter.
 
