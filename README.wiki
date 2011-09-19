@@ -42,20 +42,20 @@ Just copy the needed scripts side to your own files.
 
 * Create a Service object passing the module name as parameter.
 
- 	application = Service.Reload(Service.Service("MyModule"))
+ application = Service.Reload(Service.Service("MyModule"))
 
 * Pass the Service as the application object of a wgsi server.
 	* With mod_wsgi (apache), just name it 'application'
 	* You can use other dummy servers to test:
 
-<pre>
- 		from wsgiref.simple_server import make_server
- 		httpd = make_server(
- 			'localhost', # Host name.
- 			8051, # port
- 			application, # application object
- 			)
- 		httpd.serve_forever()
+<pre style='white-space: pre-wrap'>
+ from wsgiref.simple_server import make_server
+ httpd = make_server(
+ 	'localhost', # Host name.
+ 	8051, # port
+ 	application, # application object
+ 	)
+ httpd.serve_forever()
 </pre>
 
 * Check that it works by opening in a web server
