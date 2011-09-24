@@ -125,31 +125,39 @@ class Service :
 
 	# TODO: Not unittested
 	@wrapper
-	def _handleAffero(self, f, request) :
+	def _handleAffero(self, f, request, module=None) :
 		"""This decorator helps to acomplish the affero licence
 		this code is licenced under, by providing a service 'affero'
 		to get the source.
 		"""
 		nextLevel = request.path_info_peek()
 		if nextLevel == "affero" :
+			source = __file__ if module is None else module.__file__
+			if source.endswith("pyc") :
+				source = source[:-1]
 			return webob.Response(
-				file(__file__).read(),
-				content_type = 'application/x-python, text/plain',
+				file(source).read(),
+				content_disposition = 'filename="%s"'%(
+					os.path.basename(source)),
+				content_type = 'text/plain',
 				)
-		return f(self,request)
+		if module is None : return f(self,request)
+		return f(self,request, module)
 
-	@_webobWrap
-	@_handleErrors
-	@_handleAffero
-	def __call__(self, request):
-		""" Handle request """
-
+	@wrapper
+	def _chooseModule(self, f, request) :
 		moduleName = request.path_info_pop()
 
 		if moduleName not in self._modules :
 			raise NotFound("Bad service %s"%moduleName)
 
-		amodule = __import__(moduleName)
+		module = __import__(moduleName)
+
+		return f(self, request, module)
+
+	@wrapper
+	def _chooseTarget(self, f, request, module) :
+		moduleName = module.__name__
 
 		targetName = request.path_info_pop()
 
@@ -160,15 +168,26 @@ class Service :
 		if targetName.startswith("_") :
 			raise Forbidden("Private object")
 
-		if targetName not in amodule.__dict__ :
+		if targetName not in module.__dict__ :
 			raise NotFound("Bad function %s.%s"%(
 				moduleName, targetName))
 
-		target = amodule.__dict__[targetName]
+		target = module.__dict__[targetName]
 
 		if target.__class__.__name__ == 'module' :
 			raise NotFound("Bad function %s.%s"%(
 				moduleName, targetName))
+
+		return f(self, request, target=target)
+
+	@_webobWrap
+	@_handleErrors
+	@_handleAffero
+	@_chooseModule
+	@_handleAffero
+	@_chooseTarget
+	def __call__(self, request, target):
+		""" Handle request """
 
 		if not callable(target) :
 			return webob.Response(
