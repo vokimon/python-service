@@ -233,16 +233,16 @@ class Service :
 				", ".join(exceed)))
 
 		if hasRequest :
-			responseBody = target(request=request, **request.params)
+			result = target(request=request, **request.params)
 		else :
-			responseBody = target(**request.params)
-		if isinstance(responseBody, basestring) :
+			result = target(**request.params)
+		if isinstance(result, basestring) :
 				content_type = getattr(target, 'content_type', 'text/plain')
 				return webob.Response(
-					responseBody,
+					result,
 					content_type = content_type,
 					)
-		return responseBody
+		return result
 
 
 
