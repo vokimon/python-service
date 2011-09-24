@@ -108,6 +108,10 @@ class Service :
 
 		targetName = request.path_info_pop()
 
+		if not targetName :
+			raise BadRequest("Specify a subservice within '%s'"%(
+				moduleName))
+
 		if targetName.startswith("_") :
 			raise Forbidden("Private object")
 

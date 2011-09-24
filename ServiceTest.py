@@ -37,7 +37,6 @@ def FunctionRequest(request, a, b) :
 def FunctionRequestKeyword(request, **kwd) :
 	return request.method
 
-
 """
 
 import wsgi_intercept.urllib2_intercept
@@ -310,6 +309,15 @@ class ServiceTest(unittest.TestCase) :
 			body = "Reloaded!!",
 			headers = "Content-Type: text/plain\n",
 			)
+
+	def test_noService(self) :
+		self.assertError(
+			"TestingService?bad=boom&good=nice",
+			400,
+			body = "BadRequest: Specify a subservice within 'TestingService'\n",
+			headers = "Content-Type: text/plain\n",
+			)
+
 
 if __name__=="__main__" :
 	unittest.main()
