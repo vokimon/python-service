@@ -37,6 +37,12 @@ def FunctionRequest(request, a, b) :
 def FunctionRequestKeyword(request, **kwd) :
 	return request.method
 
+def FunctionReturningResponse(request) :
+	import webob
+	return webob.Response("Content",
+		content_type='text/plain',
+		)
+
 """
 
 import wsgi_intercept.urllib2_intercept
@@ -325,6 +331,12 @@ class ServiceTest(unittest.TestCase) :
 			headers = self.headerPlainText(),
 			)
 
+	def test_FunctionReturningResponse(self) :
+		self.assertContent(
+			"TestingService/FunctionReturningResponse",
+			body = "Content",
+			headers = self.headerPlainText(),
+			)
 
 if __name__=="__main__" :
 	unittest.main()

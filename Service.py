@@ -236,12 +236,13 @@ class Service :
 			responseBody = target(request=request, **request.params)
 		else :
 			responseBody = target(**request.params)
-
-		content_type = getattr(target, 'content_type', 'text/plain')
-		return webob.Response(
-			responseBody,
-			content_type = content_type,
-			)
+		if isinstance(responseBody, basestring) :
+				content_type = getattr(target, 'content_type', 'text/plain')
+				return webob.Response(
+					responseBody,
+					content_type = content_type,
+					)
+		return responseBody
 
 
 
