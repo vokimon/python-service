@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """
 Copyright 2007-2012 David Garcia Garzon
 
@@ -80,56 +80,63 @@ class Service :
 		if modules is not None :
 			self._modules = modules
 
-	def _webobWrap(f) :
+	def wrapper(aWrapper) :
+		"""This decorator simplifies the definition of
+		wrapper functions to be cascaded. The decorators 
+		receive the wrapped function as second argument."""
+		def decorator(wrapped) :
+			def inner(self, *args, **kwd) :
+				return aWrapper(self, wrapped, *args, **kwd)
+			return inner
+		return decorator
+
+	@wrapper
+	def _webobWrap(self, f, environ, start_response) :
 		"""This decorator takes a webob based application, receiving
 		a webob.Request and returning an webob.Response, into a wsgi
 		compatible call method. 
 		"""
-		def wrapper(self, environ, start_response) :
-			request = webob.Request(environ)
-			# Untested
-			if request.charset is None:
-				request.charset = 'utf8'
-			response = f(self,request)
-			return response(environ, start_response)
-		return wrapper
+		request = webob.Request(environ)
+		# Untested
+		if request.charset is None:
+			request.charset = 'utf8'
+		response = f(self,request)
+		return response(environ, start_response)
 
-	def _handleErrors(f) :
+	@wrapper
+	def _handleErrors(self, f, request) :
 		"""This decorator wraps a webob app and turns any raised
 		exception into proper a HTTP error response.
 		"""
-		def wrapper(self, request) :
-			try :
-				return f(self,request)
-			except HttpError, e :
-				return webob.Response(
-					"%s: %s\n"%(e.__class__.__name__, e.message),
-					status = e.status,
-					content_type ='text/plain',
-					)
-			except Exception, e :
-				return webob.Response(
-					"%s: %s\n"%(e.__class__.__name__, e),
-					status = "500 Internal Server Error",
-					content_type = 'text/plain',
-					)
-		return wrapper
+		try :
+			return f(self,request)
+		except HttpError, e :
+			return webob.Response(
+				"%s: %s\n"%(e.__class__.__name__, e.message),
+				status = e.status,
+				content_type ='text/plain',
+				)
+		except Exception, e :
+			return webob.Response(
+				"%s: %s\n"%(e.__class__.__name__, e),
+				status = "500 Internal Server Error",
+				content_type = 'text/plain',
+				)
 
 	# TODO: Not unittested
-	def _handleAffero(f) :
+	@wrapper
+	def _handleAffero(self, f, request) :
 		"""This decorator helps to acomplish the affero licence
 		this code is licenced under, by providing a service 'affero'
 		to get the source.
 		"""
-		def wrapper(self, request) :
-			nextLevel = request.path_info_peek()
-			if nextLevel == "affero" :
-				return webob.Response(
-					file(__file__).read(),
-					content_type = 'application/x-python, text/plain',
-					)
-			return f(self,request)
-		return wrapper
+		nextLevel = request.path_info_peek()
+		if nextLevel == "affero" :
+			return webob.Response(
+				file(__file__).read(),
+				content_type = 'application/x-python, text/plain',
+				)
+		return f(self,request)
 
 	@_webobWrap
 	@_handleErrors
@@ -200,9 +207,10 @@ class Service :
 		else :
 			responseBody = target(**request.params)
 
+		content_type = getattr(target, 'content_type', 'text/plain')
 		return webob.Response(
 			responseBody,
-			content_type = getattr(target, 'content_type', 'text/plain'),
+			content_type = content_type,
 			)
 
 
