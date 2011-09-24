@@ -180,20 +180,24 @@ class Service :
 
 		return f(self, request, target=target)
 
+	@wrapper
+	def _handleData(self, f, request, target) :
+		if callable(target) : return f(self, request, target)
+
+		return webob.Response(
+			str(target),
+			content_type = 'text/plain',
+			)
+
 	@_webobWrap
 	@_handleErrors
 	@_handleAffero
 	@_chooseModule
 	@_handleAffero
 	@_chooseTarget
+	@_handleData
 	def __call__(self, request, target):
 		""" Handle request """
-
-		if not callable(target) :
-			return webob.Response(
-				str(target),
-				content_type = 'text/plain',
-				)
 
 		# TODO: Multiple valued
 		requestVar = "request"
