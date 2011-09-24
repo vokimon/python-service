@@ -146,6 +146,10 @@ class Service :
 
 	@wrapper
 	def _chooseModule(self, f, request) :
+		"""This wrapper consumes one path level of the request
+		and checks that it matches the name of one of the
+		published modules.
+		"""
 		moduleName = request.path_info_pop()
 
 		if moduleName not in self._modules :
@@ -157,8 +161,11 @@ class Service :
 
 	@wrapper
 	def _chooseTarget(self, f, request, module) :
+		"""This wrapper consume one path level from the request
+		and ensures that it matches a valid element within
+		the module.
+		"""
 		moduleName = module.__name__
-
 		targetName = request.path_info_pop()
 
 		if not targetName :
