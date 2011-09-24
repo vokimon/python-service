@@ -1,4 +1,21 @@
 #! /usr/bin/env python
+"""
+Copyright 2007-2012 David Garcia Garzon
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 
 import webob
 import sys, os
@@ -64,6 +81,10 @@ class Service :
 			self._modules = modules
 
 	def _webobWrap(f) :
+		"""This decorator takes a webob based application, receiving
+		a webob.Request and returning an webob.Response, into a wsgi
+		compatible call method. 
+		"""
 		def wrapper(self, environ, start_response) :
 			request = webob.Request(environ)
 			# Untested
@@ -74,6 +95,9 @@ class Service :
 		return wrapper
 
 	def _handleErrors(f) :
+		"""This decorator wraps a webob app and turns any raised
+		exception into proper a HTTP error response.
+		"""
 		def wrapper(self, request) :
 			try :
 				return f(self,request)
@@ -91,21 +115,29 @@ class Service :
 					)
 		return wrapper
 
+	# TODO: Not unittested
+	def _handleAffero(f) :
+		"""This decorator helps to acomplish the affero licence
+		this code is licenced under, by providing a service 'affero'
+		to get the source.
+		"""
+		def wrapper(self, request) :
+			nextLevel = request.path_info_peek()
+			if nextLevel == "affero" :
+				return webob.Response(
+					file(__file__).read(),
+					content_type = 'application/x-python, text/plain',
+					)
+			return f(self,request)
+		return wrapper
+
 	@_webobWrap
 	@_handleErrors
+	@_handleAffero
 	def __call__(self, request):
 		""" Handle request """
 
 		moduleName = request.path_info_pop()
-
-		# Not unittested
-		if moduleName == 'affero' :
-			return webob.Response(
-				file(__file__).read(),
-				status = "200 OK",
-				headers = [
-					('Content-Type', 'application/x-python, text/plain') ],
-				)
 
 		if moduleName not in self._modules :
 			raise NotFound("Bad service %s"%moduleName)
