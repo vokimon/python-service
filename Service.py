@@ -63,47 +63,53 @@ class Service :
 		if modules is not None :
 			self._modules = modules
 
-	@decorator.decorator
-	def catchErrors(f, self, environ, start_response) :
-		try :
-			return f(self, environ, start_response)
-		except HttpError, e :
-			start_response(
-				status = e.status,
-				headers = [
-					('Content-Type', 'text/plain'),
-				],
-			)
-			return "%s: %s\n"%(e.__class__.__name__, e.message)
-		except Exception, e :
-			start_response(
-				status = "500 Internal Server Error",
-				headers = [
-					('Content-Type', 'text/plain'),
-				],
-			)
-			return "%s: %s\n"%(
-				e.__class__.__name__, e)
+	def _webobWrap(f) :
+		def wrapper(self, environ, start_response) :
+			request = webob.Request(environ)
+			# Untested
+			if request.charset is None:
+				request.charset = 'utf8'
+			response = f(self,request)
+			return response(environ, start_response)
+		return wrapper
 
-	@catchErrors
-	def __call__(self, environ, start_response):
-		""" Handle wsgi request """
-		request = webob.Request(environ)
-		# Untested
-		if request.charset is None:
-			request.charset = 'utf8'
+	def _handleErrors(f) :
+		def wrapper(self, request) :
+			try :
+				return f(self,request)
+			except HttpError, e :
+				return webob.Response(
+					"%s: %s\n"%(e.__class__.__name__, e.message),
+					status = e.status,
+					content_type ='text/plain',
+					)
+			except Exception, e :
+				return webob.Response(
+					"%s: %s\n"%(e.__class__.__name__, e),
+					status = "500 Internal Server Error",
+					content_type = 'text/plain',
+					)
+		return wrapper
+
+	@_webobWrap
+	@_handleErrors
+	def __call__(self, request):
+		""" Handle request """
 
 		moduleName = request.path_info_pop()
 
+		# Not unittested
 		if moduleName == 'affero' :
-			start_response(
+			return webob.Response(
+				file(__file__).read(),
 				status = "200 OK",
-				headers = [ ('Content-Type', 'application/x-python, text/plain') ],
-			)
-			return file(__file__).read()
+				headers = [
+					('Content-Type', 'application/x-python, text/plain') ],
+				)
 
 		if moduleName not in self._modules :
 			raise NotFound("Bad service %s"%moduleName)
+
 		amodule = __import__(moduleName)
 
 		targetName = request.path_info_pop()
@@ -118,52 +124,55 @@ class Service :
 		if targetName not in amodule.__dict__ :
 			raise NotFound("Bad function %s.%s"%(
 				moduleName, targetName))
+
 		target = amodule.__dict__[targetName]
+
 		if target.__class__.__name__ == 'module' :
 			raise NotFound("Bad function %s.%s"%(
 				moduleName, targetName))
 
-		if callable(target) :
-			# TODO: Multiple valued
-			requestVar = "request"
-			paramnames = target.func_code.co_varnames
-			hasRequest = requestVar in paramnames and paramnames.index(requestVar)==0
-			nDefaults = len(target.func_defaults or ())
-			nDeclared = target.func_code.co_argcount
-			required = paramnames[1 if hasRequest else 0:nDeclared-nDefaults]
-			declared = paramnames[:nDeclared]
-			hasKeyword = target.func_code.co_flags & 0x08
-			missing = [
-				p for p in required
-				if p not in request.params
-				]
-			if missing :
-				raise BadRequest("Missing parameters: %s"%(
-					", ".join(missing)))
-			exceed = [
-				p for p in request.params
-				if p not in declared 
-				]
-			if hasRequest and requestVar in request.params :
-				raise BadRequest("Unavailable parameter: %s"%requestVar)
-			if exceed and not hasKeyword:
-				raise BadRequest("Unavailable parameter: %s"%(
-					", ".join(exceed)))
+		if not callable(target) :
+			return webob.Response(
+				str(target),
+				content_type = 'text/plain',
+				)
 
-			if hasRequest :
-				result = target(request=request, **request.params)
-			else :
-				result = target(**request.params)
-			content_type = getattr(target, 'content_type', 'text/plain')
+		# TODO: Multiple valued
+		requestVar = "request"
+		paramnames = target.func_code.co_varnames
+		hasRequest = requestVar in paramnames and paramnames.index(requestVar)==0
+		nDefaults = len(target.func_defaults or ())
+		nDeclared = target.func_code.co_argcount
+		required = paramnames[1 if hasRequest else 0:nDeclared-nDefaults]
+		declared = paramnames[:nDeclared]
+		hasKeyword = target.func_code.co_flags & 0x08
+		missing = [
+			p for p in required
+			if p not in request.params
+			]
+		if missing :
+			raise BadRequest("Missing parameters: %s"%(
+				", ".join(missing)))
+		exceed = [
+			p for p in request.params
+			if p not in declared 
+			]
+		if hasRequest and requestVar in request.params :
+			raise BadRequest("Unavailable parameter: %s"%requestVar)
+		if exceed and not hasKeyword:
+			raise BadRequest("Unavailable parameter: %s"%(
+				", ".join(exceed)))
+
+		if hasRequest :
+			responseBody = target(request=request, **request.params)
 		else :
-			result = target
-			content_type = 'text/plain'
+			responseBody = target(**request.params)
 
-		start_response(
-			status = "200 OK",
-			headers = [ ('Content-Type', content_type) ],
-		)
-		return str(result)
+		return webob.Response(
+			responseBody,
+			content_type = getattr(target, 'content_type', 'text/plain'),
+			)
+
 
 
 if __name__=="__main__" :

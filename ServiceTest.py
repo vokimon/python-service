@@ -79,9 +79,11 @@ class ServiceTest(unittest.TestCase) :
 	def assertContent(self, query, body=None, headers=None, post=None) :
 		try :
 			req = self.request(query, post)
+			requestBody = req.read()
 			if body is not None :
-				self.assertEquals(body, req.read())
+				self.assertEquals(body, requestBody)
 			if headers is not None :
+				headers = headers.format(bodysize=len(requestBody))
 				self.assertEquals(headers, str(req.headers))
 		except urllib2.HTTPError, e :
 			print e.read()
@@ -92,20 +94,32 @@ class ServiceTest(unittest.TestCase) :
 			res = self.request(query, post)
 			self.fail("HTTP error expected. Received '%s'"%res.read())
 		except urllib2.HTTPError,e :
+			requestBody = e.read()
 			if body is not None :
-				self.assertEquals(body, e.read())
+				self.assertEquals(body, requestBody)
 			self.assertEquals(code, e.getcode())
 			if headers is not None:
+				headers = headers.format(bodysize=len(requestBody))
 				self.assertEquals(headers, str(e.headers))
 
+	def headerHtmlText(self) :
+		return (
+			"""Content-Type: text/html; charset=UTF-8\n"""
+			"""Content-Length: {bodysize}\n"""
+			)
 
+	def headerPlainText(self) :
+		return (
+			"""Content-Type: text/plain; charset=UTF-8\n"""
+			"""Content-Length: {bodysize}\n"""
+			)
 
 	def testMissingModule(self) :
 		self.assertError(
 			'BadModule/Protocol',
 			code = 404,
 			body = "NotFound: Bad service BadModule\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testMissingTarget(self) :
@@ -113,7 +127,7 @@ class ServiceTest(unittest.TestCase) :
 			'TestingService/MissingTarget',
 			code = 404,
 			body = "NotFound: Bad function TestingService.MissingTarget\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testGetAttributes(self) :
@@ -125,7 +139,7 @@ class ServiceTest(unittest.TestCase) :
 	def testGetAttributes_defaultsToPlainText(self) :
 		self.assertContent(
 			'TestingService/Protocol',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testPrivateObject(self) :
@@ -133,7 +147,7 @@ class ServiceTest(unittest.TestCase) :
 			'TestingService/_private',
 			code = 403,
 			body = "Forbidden: Private object\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testNumericAttribute(self) :
@@ -146,21 +160,14 @@ class ServiceTest(unittest.TestCase) :
 			'TestingService/sys',
 			code = 404,
 			body = "NotFound: Bad function TestingService.sys\n",
-			headers = "Content-Type: text/plain\n",
-			)
-
-	def testFunction0(self) :
-		self.assertContent(
-			"TestingService/Function0",
-			'Function0 content',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunction0_html(self) :
 		self.assertContent(
 			"TestingService/Function0_html",
 			'Function0_html <b>content</b>',
-			headers = "Content-Type: text/html\n",
+			headers = self.headerHtmlText(),
 			)
 
 	def testErrorFunction0_html(self) :
@@ -175,21 +182,21 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/Function1",
 			400,
 			'BadRequest: Missing parameters: param1\n',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunction1_usingGet(self) :
 		self.assertContent(
 			"TestingService/Function1?param1=value1",
 			body = 'param1 = value1',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunction1_usingMultipleGet_lastWins(self) :
 		self.assertContent(
 			"TestingService/Function1?param1=value1&param1=value2",
 			body = 'param1 = value2',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunction1_usingPost(self) :
@@ -197,7 +204,7 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/Function1",
 			post = dict(param1='post value'),
 			body = 'param1 = post value',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunction1_usingPostAndUri_getWins(self) :
@@ -205,7 +212,7 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/Function1?param1=get",
 			post = dict(param1='post'),
 			body = 'param1 = get',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunction0_withParams(self) :
@@ -213,35 +220,35 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/Function0?param=value",
 			400,
 			'BadRequest: Unavailable parameter: param\n',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunction1Optional_withoutTheParam(self) :
 		self.assertContent(
 			"TestingService/Function1Optional",
 			body = 'param1 = defaultValue',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionKeyword_withoutParams(self) :
 		self.assertContent(
 			"TestingService/FunctionKeyword",
 			body = '{}',
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionKeyword_withParams(self) :
 		self.assertContent(
 			"TestingService/FunctionKeyword?a=1&b=2",
 			body = "{'a': u'1', 'b': u'2'}",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionPositional(self) :
 		self.assertContent(
 			"TestingService/FunctionPositional?a=1",
 			body = "a = '1'\nargs = ()",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionPositional_withExtraParam(self) :
@@ -249,7 +256,7 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/FunctionPositional?a=1&c=2",
 			code = 400,
 			body = "BadRequest: Unavailable parameter: c\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionPositional_withExtraParamNamedLikeThePositional(self) :
@@ -257,14 +264,14 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/FunctionPositional?a=1&b=2",
 			code = 400,
 			body = "BadRequest: Unavailable parameter: b\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionRequest(self) :
 		self.assertContent(
 			"TestingService/FunctionRequest?a=1&b=2",
 			body = "GET",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionRequest_requestHijack(self) :
@@ -272,14 +279,14 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/FunctionRequest?a=1&b=2&request='hijack'",
 			400,
 			body = "BadRequest: Unavailable parameter: request\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionRequest(self) :
 		self.assertContent(
 			"TestingService/FunctionRequestKeyword?a=1&b=2",
 			body = "GET",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testFunctionRequestKeyword_requestHijack(self) :
@@ -287,7 +294,7 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService/FunctionRequestKeyword?request='hijack'",
 			400,
 			body = "BadRequest: Unavailable parameter: request\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def testReload(self) :
@@ -307,7 +314,7 @@ class ServiceTest(unittest.TestCase) :
 		self.assertContent(
 			"TestingService/Function0",
 			body = "Reloaded!!",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 	def test_noService(self) :
@@ -315,7 +322,7 @@ class ServiceTest(unittest.TestCase) :
 			"TestingService?bad=boom&good=nice",
 			400,
 			body = "BadRequest: Specify a subservice within 'TestingService'\n",
-			headers = "Content-Type: text/plain\n",
+			headers = self.headerPlainText(),
 			)
 
 
