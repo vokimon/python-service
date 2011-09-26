@@ -43,6 +43,20 @@ def FunctionReturningResponse(request) :
 		content_type='text/plain',
 		)
 
+def dummySigner(signature, id, **kwd) :
+	import Service
+	keys = dict(
+		alibaba="sesame, open",
+		)
+	if id not in keys : raise Service.Forbidden("Not such id")
+	expectedKey = keys[id]+'0' #str(len(kwd))
+	if signature != expectedKey : raise Service.Forbidden("Bad signature")
+
+import spike_expanddecorator
+@spike_expanddecorator.expand_decorator(dummySigner)
+def signedFunction0() :
+	return "Ok"
+
 """
 
 import wsgi_intercept.urllib2_intercept
@@ -335,6 +349,30 @@ class ServiceTest(unittest.TestCase) :
 		self.assertContent(
 			"TestingService/FunctionReturningResponse",
 			body = "Content",
+			headers = self.headerPlainText(),
+			)
+
+	def test_signedFunction0_withNoParameters(self) :
+		self.assertError(
+			"TestingService/signedFunction0",
+			400,
+			body = "BadRequest: Missing parameters: signature, id\n",
+			headers = self.headerPlainText(),
+			)
+
+	def test_signedFunction0_withBadId(self) :
+		self.assertError(
+			"TestingService/signedFunction0?id=badId&signature=nevermind",
+			403,
+			body = "Forbidden: Not such id\n",
+			headers = self.headerPlainText(),
+			)
+
+	def test_signedFunction0_withBadSignature(self) :
+		self.assertError(
+			"TestingService/signedFunction0?id=alibaba&signature=sesame0",
+			403,
+			body = "Forbidden: Bad signature\n",
 			headers = self.headerPlainText(),
 			)
 

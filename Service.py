@@ -205,7 +205,6 @@ class Service :
 	@_handleData
 	def __call__(self, request, target):
 		""" Handle request """
-
 		# TODO: Multiple valued
 		requestVar = "request"
 		paramnames = target.func_code.co_varnames
