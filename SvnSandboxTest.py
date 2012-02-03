@@ -5,7 +5,7 @@ import xml.etree.cElementTree as ET
 import utils
 
 
-class Subversion(object) :
+class SvnSandbox(object) :
 	def __init__(self, sandbox ) :
 		self.sandbox = sandbox
 
@@ -56,7 +56,7 @@ class Subversion(object) :
 import os
 import unittest
 
-class SubversionTest(unittest.TestCase) :
+class SvnSandboxTest(unittest.TestCase) :
 	def x(self, command) :
 		return utils.run(command%self.defs)
 	def inSandbox(self, file) :
@@ -99,7 +99,7 @@ class SubversionTest(unittest.TestCase) :
 	def test_state(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertEquals('0', s.state())
 		self.x('svn up %(sandbox)s') # go to HEAD
 		self.assertEquals('4', s.state())
@@ -110,7 +110,7 @@ class SubversionTest(unittest.TestCase) :
 		self.addFile('file')
 		self.addRevisions('file',3)
 		self.x('svn up -r1 %(sandbox)s') # go to r1
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertEquals(
 			['2','3','4'], s.pendingUpdates())
 
@@ -118,7 +118,7 @@ class SubversionTest(unittest.TestCase) :
 		self.addFile('file')
 		self.addRevisions('file',3)
 		self.x('svn up -r1 %(sandbox)s') # go to r1
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertEquals(
 			[
 				('2','myuser',"change 0 of file"),
@@ -147,7 +147,7 @@ class SubversionTest(unittest.TestCase) :
 		self.x('echo nonsvnAdd > %(sandbox)s/nonsvnAdd')
 		self.x('rm %(sandbox)s/nonsvnRemove')
 
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.maxDiff = None
 		self.assertEquals(
 			[
@@ -171,14 +171,14 @@ class SubversionTest(unittest.TestCase) :
 		self.addFile('nonsvnRemove', False)
 		self.commitAll("State were we want to go back")
 
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertFalse(s.hasPendingChanges())
 
 	def test_hasPendingChanges_whenMissingFile(self) :
 		self.addFile('nonsvnRemove')
 		self.x('rm %(sandbox)s/nonsvnRemove')
 
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
 	def test_hasPendingChanges_whenPendingModification(self) :
@@ -186,7 +186,7 @@ class SubversionTest(unittest.TestCase) :
 		self.addRevisions('remoteChange',1)
 		self.x('svn up -r1 %(sandbox)s') # going back
 
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
 	def test_hasPendingChanges_whenPendingRemove(self) :
@@ -194,14 +194,14 @@ class SubversionTest(unittest.TestCase) :
 		self.removeFile('remoteRemove')
 		self.x('svn up -r1 %(sandbox)s') # going back
 
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
 	def test_hasPendingChanges_whenPendingAdd(self) :
 		self.addFile('remoteAdd')
 		self.x('svn up -r0 %(sandbox)s') # going back
 
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
 	def test_hasPendingChanges_whenLocalChanges(self) :
@@ -215,7 +215,7 @@ class SubversionTest(unittest.TestCase) :
 		self.addFile('localAdd', False)
 		self.x('echo nonsvnAdd > %(sandbox)s/nonsvnAdd')
 
-		s = Subversion(self.defs['sandbox'])
+		s = SvnSandbox(self.defs['sandbox'])
 		self.maxDiff = None
 		self.assertFalse(s.hasPendingChanges())
 
