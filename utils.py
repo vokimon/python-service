@@ -78,6 +78,8 @@ def run(command, message=None, log=sys.stdout, err=None, fatal=True) :
 				err.write(process.stderr.readline())
 			if fd==process.stdout.fileno() :
 				log.write(process.stdout.readline())
+	log.write(process.stdout.read())
+	err.write(process.stderr.read())
 	if fatal and process.returncode : die("Failed, exit code %i"%process.returncode, process.returncode)
 	return process.returncode != 0
 
