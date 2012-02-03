@@ -34,20 +34,14 @@ class Subversion(object) :
 		result = []
 		for entry in log.getiterator("entry") :
 			wcstatus = entry.find("wc-status")
-			print wcstatus
-			wcstatus = ",".join([wcstatus.get('item'), wcstatus.get('props')]) if wcstatus else ","
-			print wcstatus
-			repostatus = entry.find("repo-status")
-			print repostatus
-			repostatus = ",".join([repostatus.get('item'), repostatus.get('props')]) if repostatus else ","
-			print repostatus
-		return [(
-			entry.get('path'),
-			entry.find('repos-status').get("item") if entry.find('repos-status') else "",
-			entry.find('repos-status').get("props") if entry.find('repos-status') else "",
-			entry.find('wc-status').get("item") if entry.find('wc-status') else "",
-			entry.find('wc-status').get("props") if entry.find('wc-status') else "",
-			) for entry in log.getiterator("entry") ]
+			repostatus = entry.find("repos-status")
+			wcitem = '' if wcstatus is None else wcstatus.get('item', '')
+			wcprop = '' if wcstatus is None else wcstatus.get('props', '')
+			repoitem = '' if repostatus is None else repostatus.get('item', '')
+			repoprop = '' if repostatus is None else repostatus.get('props', '')
+			status = ( wcitem, wcprop, repoitem, repoprop)
+			result.append( ( entry.get('path'), status))
+		return result
 
 import os
 import unittest
@@ -111,21 +105,28 @@ class SubversionTest(unittest.TestCase) :
 				('3','myuser',"change 1 of file"),
 				('4','myuser',"change 2 of file"),
 			], s.guilty())
+	def inSandbox(self, file) :
+		return os.path.join(self.defs['sandbox'],file)
 
 	def test_pendingChanges(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)
+		self.addFile('pendingAdd')
 		self.x('svn up -r1 %(sandbox)s') # go to r1
 		self.x('touch %(sandbox)s/added')
 		self.x('svn add %(sandbox)s/added')
 		self.x('touch %(sandbox)s/notadded')
 		s = Subversion(self.defs['sandbox'])
+		self.maxDiff = None
 		self.assertEquals(
 			[
-				('2','myuser',"change 0 of file"),
-				('3','myuser',"change 1 of file"),
-				('4','myuser',"change 2 of file"),
-			], s.pendingChanges())
+				(self.defs['sandbox'], ('normal', 'none', 'modified', 'none')),
+				(self.inSandbox('added'), ('added', 'none', '', '')),
+				(self.inSandbox('file'), ('normal', 'none', 'modified', 'none')),
+				(self.inSandbox('notadded'), ('unversioned', 'none', '', '')),
+				(self.inSandbox('pendingAdd'), ('none', 'none', 'added', 'none')),
+
+			], sorted(s.pendingChanges()))
 
 
 if __name__ == '__main__' :
