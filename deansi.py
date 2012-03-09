@@ -1,4 +1,20 @@
 #!/usr/bin/python
+"""
+Copyright 2012 David Garcia Garzon
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+"""
 
 # http://en.wikipedia.org/wiki/ANSI_escape_code
 # TODO: Support disable codes: 20 + attribCodes
@@ -63,10 +79,10 @@ def defaultAnsiStyle() :
 def ansiAttributes(block) :
 	"""Extracts ansi attribute codes XX from the begining [XX;XX;XXm and the rest of the text"""
 
-	attributeRe = re.compile( r'^[[](\d+(?:;\d+)*)m(.*)')
+	attributeRe = re.compile( r'^[[](\d+(?:;\d+)*)m')
 	match = attributeRe.match(block)
 	if not match : return [], block
-	return [int(code) for code in match.group(1).split(";")], match.group(2)
+	return [int(code) for code in match.group(1).split(";")], block[match.end(1)+1:]
 
 
 def ansiState(code, attribs, fg, bg) :
@@ -270,8 +286,14 @@ if __name__ == "__main__" :
 				deansi('this should be \033[31mred\033[42;1m and green background\033[0m and this not'),
 			)
 
-	
-	print """\
+		def test_deansi_takesMultiline(self) :
+			self.assertEquals(
+				'this should be <span class=\'ansi_red\'>\nred</span>'
+				'<span class=\'ansi_bright ansi_red ansi_bggreen\'> and green \nbackground\n</span> and this not',
+				deansi('this should be \033[31m\nred\033[42;1m and green \nbackground\n\033[0m and this not'),
+			)
+		def test_backToBack(self) :
+			result = """\
 <style>
 %s
 </style>
@@ -298,7 +320,59 @@ Some background colors:
 	\033[47mwhite\033[0m
 	\033[49mdefault\033[0m
 """))
-	result = unittest.main()
+			self.assertEquals("""\
+<style>
+.ansi_terminal {  }
+.ansi_black { color: black; }
+.ansi_red { color: red; }
+.ansi_green { color: green; }
+.ansi_yellow { color: yellow; }
+.ansi_blue { color: blue; }
+.ansi_magenta { color: magenta; }
+.ansi_cyan { color: cyan; }
+.ansi_white { color: white; }
+.ansi_bgblack { background-color: black; }
+.ansi_bgred { background-color: red; }
+.ansi_bggreen { background-color: green; }
+.ansi_bgyellow { background-color: yellow; }
+.ansi_bgblue { background-color: blue; }
+.ansi_bgmagenta { background-color: magenta; }
+.ansi_bgcyan { background-color: cyan; }
+.ansi_bgwhite { background-color: white; }
+.ansi_bright { font-weight: bold; }
+.ansi_faint { opacity: 80%; }
+.ansi_italic { font-style: italic; }
+.ansi_underscore { text-decoration: underline; }
+.ansi_blink { text-decoration: blink; }
+.ansi_reverse { border: 1pt solid; }
+.ansi_hide { opacity: 0%; }
+.ansi_strike { text-decoration: line-through; }
+
+</style>
+<div class='ansi_console'>
+Some colors:
+	<span class='ansi_red'>red</span>
+	<span class='ansi_green'>green</span>
+	<span class='ansi_yellow'>yellow</span>
+	<span class='ansi_blue'>blue</span>
+	<span class='ansi_blue'>magenta</span>
+	<span class='ansi_cyan'>cyan</span>
+	<span class='ansi_white'>white</span>
+	default
+Some background colors:
+	<span class='ansi_bgred'>red</span>
+	<span class='ansi_bggreen'>green</span>
+	<span class='ansi_bgyellow'>yellow</span>
+	<span class='ansi_bgblue'>blue</span>
+	<span class='ansi_bgblue'>magenta</span>
+	<span class='ansi_bgcyan'>cyan</span>
+	<span class='ansi_bgwhite'>white</span>
+	default
+
+</div>
+""", result)
+
+	unittest.main()
 
 
 
