@@ -49,7 +49,10 @@ attribCodes = {
 }
 def defaultAnsiStyle() :
 	return """\
-.ansi_terminal {  }
+.ansi_terminal {
+	white-space: pre;
+	font-family: monospace;
+}
 .ansi_black { color: black; }
 .ansi_red { color: red; }
 .ansi_green { color: green; }
@@ -67,12 +70,12 @@ def defaultAnsiStyle() :
 .ansi_bgcyan { background-color: cyan; }
 .ansi_bgwhite { background-color: white; }
 .ansi_bright { font-weight: bold; }
-.ansi_faint { opacity: 80%; }
+.ansi_faint { opacity: .5; }
 .ansi_italic { font-style: italic; }
 .ansi_underscore { text-decoration: underline; }
 .ansi_blink { text-decoration: blink; }
 .ansi_reverse { border: 1pt solid; }
-.ansi_hide { opacity: 0%; }
+.ansi_hide { opacity: 0; }
 .ansi_strike { text-decoration: line-through; }
 """
 
@@ -126,6 +129,8 @@ def deansi(text) :
 	text = "".join(ansiBlocks)
 	return text
 
+
+# From here onwards it is just test code
 
 
 if __name__ == "__main__" :
@@ -295,34 +300,48 @@ if __name__ == "__main__" :
 		def test_backToBack(self) :
 			result = """\
 <style>
+.ansi_terminal { background-color: #cca; }
 %s
 </style>
-<div class='ansi_console'>
-%s
-</div>
+<div class='ansi_terminal'>%s</div>
 """%(defaultAnsiStyle(), deansi("""\
 Some colors:
 	\033[31mred\033[0m
 	\033[32mgreen\033[0m
 	\033[33myellow\033[0m
 	\033[34mblue\033[0m
-	\033[34mmagenta\033[0m
+	\033[35mmagenta\033[0m
 	\033[36mcyan\033[0m
 	\033[37mwhite\033[0m
-	\033[39mdefault\033[0m
+	\033[39mdefault\033[0m <- not implemeted
 Some background colors:
 	\033[41mred\033[0m
 	\033[42mgreen\033[0m
 	\033[43myellow\033[0m
 	\033[44mblue\033[0m
-	\033[44mmagenta\033[0m
+	\033[45mmagenta\033[0m
 	\033[46mcyan\033[0m
 	\033[47mwhite\033[0m
-	\033[49mdefault\033[0m
+	\033[49mdefault\033[0m <- not implemeted
+Some attributes:
+	\033[1mbright\033[0m
+	\033[2mfaint\033[0m
+	\033[3mitalic\033[0m
+	\033[4munderscore\033[0m
+	\033[5mblink\033[0m
+	\033[6mdouble blink\033[0m <- not implemeted
+	\033[7mreverse\033[0m
+	\033[8mhide\033[0m <- It's hiden you mark and copy it
+	\033[9mstrike\033[0m
 """))
+			file("deansi-b2b.html","w").write(result)
 			self.assertEquals("""\
 <style>
-.ansi_terminal {  }
+.ansi_terminal { background-color: #cca; }
+.ansi_terminal {
+	white-space: pre;
+	font-family: monospace;
+}
 .ansi_black { color: black; }
 .ansi_red { color: red; }
 .ansi_green { color: green; }
@@ -340,35 +359,44 @@ Some background colors:
 .ansi_bgcyan { background-color: cyan; }
 .ansi_bgwhite { background-color: white; }
 .ansi_bright { font-weight: bold; }
-.ansi_faint { opacity: 80%; }
+.ansi_faint { opacity: .5; }
 .ansi_italic { font-style: italic; }
 .ansi_underscore { text-decoration: underline; }
 .ansi_blink { text-decoration: blink; }
 .ansi_reverse { border: 1pt solid; }
-.ansi_hide { opacity: 0%; }
+.ansi_hide { opacity: 0; }
 .ansi_strike { text-decoration: line-through; }
 
 </style>
-<div class='ansi_console'>
+<div class='ansi_terminal'>\
 Some colors:
 	<span class='ansi_red'>red</span>
 	<span class='ansi_green'>green</span>
 	<span class='ansi_yellow'>yellow</span>
 	<span class='ansi_blue'>blue</span>
-	<span class='ansi_blue'>magenta</span>
+	<span class='ansi_magenta'>magenta</span>
 	<span class='ansi_cyan'>cyan</span>
 	<span class='ansi_white'>white</span>
-	default
+	default &lt;- not implemented
 Some background colors:
 	<span class='ansi_bgred'>red</span>
 	<span class='ansi_bggreen'>green</span>
 	<span class='ansi_bgyellow'>yellow</span>
 	<span class='ansi_bgblue'>blue</span>
-	<span class='ansi_bgblue'>magenta</span>
+	<span class='ansi_bgmagenta'>magenta</span>
 	<span class='ansi_bgcyan'>cyan</span>
 	<span class='ansi_bgwhite'>white</span>
-	default
-
+	default &lt;- not implemented
+Some attributes:
+	<span class='ansi_bright'>bright</span>
+	<span class='ansi_faint'>faint</span>
+	<span class='ansi_italic'>italic</span>
+	<span class='ansi_underscore'>underscore</span>
+	<span class='ansi_blink'>blink</span>
+	double blink &lt;- not implemented
+	<span class='ansi_reverse'>reverse</span>
+	<span class='ansi_hide'>hide</span> &lt;- It's hiden you mark and copy it
+	<span class='ansi_strike'>strike</span>
 </div>
 """, result)
 
