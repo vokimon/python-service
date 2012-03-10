@@ -20,11 +20,12 @@ __doc__ = """\
 This module provides functions to convert terminal output including
 ansi terminal codes to stylable html.
 
-The main entry point are 'deansi(input)' which performs the conversion on an 
-input string and 'styleSheet' which provides a minimal style sheet.
-You can overwrite stylesheets by placing new rules after this default one.
+The main entry point are 'deansi(input)' which performs the conversion
+on an input string and 'styleSheet' which provides a minimal style sheet.
+You can overwrite stylesheets by placing new rules after this minimal one.
 """
 
+# TODO: Support empty m, being like 0m
 # TODO: Support 38 and 38 (next attrib is a 256 palette color (xterm?))
 # TODO: Support 51-55 decorations (framed, encircled, overlined, no frame/encircled, no overline)
 
@@ -114,9 +115,10 @@ def styleSheet(brightColors=True, boldBrightColors=True) :
 def ansiAttributes(block) :
 	"""Extracts ansi attribute codes XX from the begining [XX;XX;XXm and the rest of the text"""
 
-	attributeRe = re.compile( r'^[[](\d+(?:;\d+)*)m')
+	attributeRe = re.compile( r'^[[](\d+(?:;\d+)*)?m')
 	match = attributeRe.match(block)
 	if not match : return [], block
+	if match.group(1) is None : return [0], block[2:]
 	return [int(code) for code in match.group(1).split(";")], block[match.end(1)+1:]
 
 
@@ -186,7 +188,7 @@ if __name__ == "__main__" :
 		print html_template % (styleSheet(), deansi(inputFile.read()))
 		sys.exit(0)
 
-
+	sys.argv.remove('--test')
 	import unittest
 	
 	class DeansiTest(unittest.TestCase) :
@@ -221,6 +223,12 @@ if __name__ == "__main__" :
 			self.assertEquals(
 				([], '[a;bmtext'),
 				ansiAttributes("[a;bmtext")
+			)
+
+		def test_ansiAttributes_emptyReturnsZero(self) :
+			self.assertEquals(
+				([0], 'text'),
+				ansiAttributes("[mtext")
 			)
 
 		def test_ansiState_bright(self) :
@@ -258,6 +266,7 @@ if __name__ == "__main__" :
 				(set(['reverse']), None, None),
 				ansiState(7, set(), None, None),
 			)
+
 		def test_ansiState_hide(self) :
 			self.assertEquals(
 				(set(['hide']), None, None),
@@ -360,6 +369,12 @@ if __name__ == "__main__" :
 				deansi('this should be \033[31mred\033[0m and this not'),
 			)
 
+		def test_deansi_emptyAttributeClears(self) :
+			self.assertEquals(
+				'this should be <span class=\'ansi_red\'>red</span> and this not',
+				deansi('this should be \033[31mred\033[m and this not'),
+			)
+
 		def test_deansi_withComplexCodes(self) :
 			self.assertEquals(
 				'this should be <span class=\'ansi_red\'>red</span>'
@@ -373,6 +388,7 @@ if __name__ == "__main__" :
 				'<span class=\'ansi_bright ansi_red ansi_bggreen\'> and green \nbackground\n</span> and this not',
 				deansi('this should be \033[31m\nred\033[42;1m and green \nbackground\n\033[0m and this not'),
 			)
+
 		def test_backToBack(self) :
 			terminalInput = """\
 Normal colors:
