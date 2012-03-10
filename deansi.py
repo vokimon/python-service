@@ -66,32 +66,28 @@ variations = [ # normal, pale, bright
 	('white', 'lightgray', 'white'), 
 ]
 
-def styleSheet(brightColors=True, boldBrightColors=True) :
+def styleSheet(brightColors=True) :
 	"""\
 	Returns a minimal css stylesheet so that deansi output 
 	could be displayed properly in a browser.
 	You can append more rules to modify this default
 	stylesheet.
 
-	brightColors: set to False to use the same color when
-		bright attribute is set and when not.
-	boldBrightColors: set to False to disable bolding
-		of colored bright text.
+	brightColors: set it to False to use the same color
+		when bright attribute is set and when not.
 	"""
 
 	simpleColors = [
-		".ansi_%s { color: %s; }"%(normal, normal)
+		".ansi_%s { color: %s; }" % (normal, normal)
 		for normal, pale, bright in variations]
 	paleColors = [
-		".ansi_%s { color: %s; }"%(normal, pale)
+		".ansi_%s { color: %s; }" % (normal, pale)
 		for normal, pale, bright in variations]
-	boldDisabler = "font-weight: inherit; " if not boldBrightColors else ""
 	lightColors = [
-		".ansi_bright.ansi_%s { color: %s; %s}" % (
-			normal, normal, boldDisabler)
+		".ansi_bright.ansi_%s { color: %s; }" % (normal, bright)
 		for normal, pale, bright in variations]
 	bgcolors = [
-		".ansi_bg%s { background-color: %s; }" %(normal, normal)
+		".ansi_bg%s { background-color: %s; }" % (normal, normal)
 		for normal, pale, bright in variations]
 
 	attributes = [
@@ -113,7 +109,9 @@ def styleSheet(brightColors=True, boldBrightColors=True) :
 		)
 
 def ansiAttributes(block) :
-	"""Extracts ansi attribute codes XX from the begining [XX;XX;XXm and the rest of the text"""
+	"""Given a sequence "[XX;XX;XXmMy Text", where XX are ansi 
+	attribute codes, returns a tuple with the list of extracted
+	ansi codes and the remaining text 'My Text'"""
 
 	attributeRe = re.compile( r'^[[](\d+(?:;\d+)*)?m')
 	match = attributeRe.match(block)
