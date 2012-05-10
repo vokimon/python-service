@@ -26,7 +26,7 @@ class SvnSandboxTest(unittest.TestCase) :
 				self.x('svn commit %%(sandbox)s/%s -m"change %i of %s"'%(file,i,file))
 	def commitAll(self, message) :
 		self.x('svn commit %%(sandbox)s/ -m"%s"'%(message))
-		
+
 
 	def setUp(self) :
 		self.defs = dict(
