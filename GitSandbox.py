@@ -1,9 +1,6 @@
 #!/usr/bin/python
 
-import xml.etree.cElementTree as ET
-#import xml.etree.ElementTree as ET # Python 2.5
 import utils
-
 
 class GitSandbox(object) :
 	def __init__(self, sandbox ) :

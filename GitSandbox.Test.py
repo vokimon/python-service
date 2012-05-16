@@ -28,17 +28,14 @@ class GitSandboxTest(unittest.TestCase) :
 				self.commitFile(file,"change %i of %s"%(i,file))
 	def pushRevision(self) :
 		self.revisions.append(file("%(sandbox)s/.git/refs/heads/master"%self.defs).read().strip())
-
 	def commitFile(self, file, message) :
 		self.s('git commit %s -m"%s"'%(file,message))
 		self.s('git push origin master')
 		self.pushRevision()
-
 	def commitAll(self, message) :
 		self.s('git commit -a -m"%s"'%(message))
 		self.s('git push origin master')
 		self.pushRevision()
-
 	def rewind(self, revisions=1) :
 		self.s('git reset --hard HEAD~%i' % revisions)
 
@@ -87,10 +84,10 @@ class GitSandboxTest(unittest.TestCase) :
 		self.assertEquals(
 			self.revisions[-3:], s.pendingUpdates())
 
-	def _test_guilty(self) :
+	def test_guilty(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)
-		self.x('svn up -r1 %(sandbox)s') # go to r1
+		self.rewind(3)
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertEquals(
 			[
@@ -99,7 +96,7 @@ class GitSandboxTest(unittest.TestCase) :
 				('4','myuser',"change 2 of file"),
 			], s.guilty())
 
-	def _test_pendingChanges(self) :
+	def test_pendingChanges(self) :
 		self.addFile('remoteChange', False)
 		self.addFile('remoteRemove', False)
 		self.addFile('localRemove', False)
@@ -111,7 +108,7 @@ class GitSandboxTest(unittest.TestCase) :
 		self.addFile('remoteAdd', False)
 		self.removeFile('remoteRemove', False)
 		self.commitAll("State we want to update to")
-		self.x('svn up -r1 %(sandbox)s') # going back
+		self.rewind(1)
 
 		# local modifications
 		self.addRevisions('localChange', 1, False)
@@ -136,7 +133,7 @@ class GitSandboxTest(unittest.TestCase) :
 
 			], sorted(s._pendingChanges()))
 
-	def _test_hasPendingChanges_whenNoPendingChanges(self) :
+	def test_hasPendingChanges_whenNoPendingChanges(self) :
 		self.addFile('remoteChange', False)
 		self.addFile('remoteRemove', False)
 		self.addFile('localRemove', False)
@@ -147,37 +144,37 @@ class GitSandboxTest(unittest.TestCase) :
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertFalse(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenMissingFile(self) :
+	def test_hasPendingChanges_whenMissingFile(self) :
 		self.addFile('nonsvnRemove')
 		self.x('rm %(sandbox)s/nonsvnRemove')
 
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenPendingModification(self) :
+	def test_hasPendingChanges_whenPendingModification(self) :
 		self.addFile('remoteChange')
 		self.addRevisions('remoteChange',1)
-		self.x('svn up -r1 %(sandbox)s') # going back
+		self.rewind(1)
 
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenPendingRemove(self) :
+	def test_hasPendingChanges_whenPendingRemove(self) :
 		self.addFile('remoteRemove')
 		self.removeFile('remoteRemove')
-		self.x('svn up -r1 %(sandbox)s') # going back
+		self.rewind(1)
 
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenPendingAdd(self) :
+	def test_hasPendingChanges_whenPendingAdd(self) :
 		self.addFile('remoteAdd')
-		self.x('svn up -r0 %(sandbox)s') # going back
+		self.rewind(1)
 
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenLocalChanges(self) :
+	def test_hasPendingChanges_whenLocalChanges(self) :
 		self.addFile('localRemove', False)
 		self.addFile('localChange', False)
 		self.commitAll("State were we want to go back")

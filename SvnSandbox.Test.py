@@ -14,19 +14,34 @@ class SvnSandboxTest(unittest.TestCase) :
 		self.x('touch %%(sandbox)s/%s'%file)
 		self.x('svn add %%(sandbox)s/%s'%file)
 		if commit :
-			self.x('svn commit %%(sandbox)s/%s -m"added %s"'%(file,file))
+			self.commitFile(file, "added %s" % file)
 	def removeFile(self, file, commit=True) :
 		self.x('svn rm %%(sandbox)s/%s'%file)
 		if commit :
-			self.x('svn commit %%(sandbox)s/%s -m"removed %s"'%(file,file))
+			self.commitFile(file, "removed %s" % file)
 	def addRevisions(self, file, n, commit=True) :
 		for i in xrange(n) :
 			self.x('echo Change %s >> %%(sandbox)s/%s'%(i,file))
 			if commit :
-				self.x('svn commit %%(sandbox)s/%s -m"change %i of %s"'%(file,i,file))
+				self.commitFile(file, "change %i of %s"%(i,file))
+	def pushRevision(self) :
+		self.revisions.append(str(len(self.revisions)))
+		print "REVISIONS", self.revisions
+	def commitFile(self, file, message) :
+		self.x('svn commit %%(sandbox)s/%s -m"%s"'%(file,message))
+		self.x('svn up %(sandbox)s')
+		self.pushRevision()
 	def commitAll(self, message) :
 		self.x('svn commit %%(sandbox)s/ -m"%s"'%(message))
-
+		self.x('svn up %(sandbox)s')
+		self.pushRevision()
+	def rewind(self, revisions=1) :
+		target = int(self.current())-revisions
+		self.x('svn up -r%s %%(sandbox)s'%(target))
+	def current(self) :
+		output = utils.output('svn info -r BASE %(sandbox)s | grep ^Revision: '%self.defs)
+		print "CURRENT",output.split()
+		return output.split()[-1]
 
 	def setUp(self) :
 		self.defs = dict(
@@ -37,6 +52,7 @@ class SvnSandboxTest(unittest.TestCase) :
 			)
 		self.x('rm -rf %(testdir)s')
 		self.x('mkdir -p %(testdir)s')
+		self.revisions = ['0']
 		self.x('svnadmin create %(repo)s')
 		self.x('svn co --username %(username)s file://%(repo)s %(sandbox)s')
 
@@ -49,24 +65,22 @@ class SvnSandboxTest(unittest.TestCase) :
 		self.addFile('file')
 		self.addRevisions('file',3)
 		s = SvnSandbox(self.defs['sandbox'])
-		self.assertEquals('0', s.state())
-		self.x('svn up %(sandbox)s') # go to HEAD
-		self.assertEquals('4', s.state())
-		self.x('svn up -r1 %(sandbox)s') # go to r1
-		self.assertEquals('1', s.state())
+		self.assertEquals(self.revisions[4], s.state())
+		self.rewind(3)
+		self.assertEquals(self.revisions[1], s.state())
 
 	def test_pendingCommits(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)
-		self.x('svn up -r1 %(sandbox)s') # go to r1
+		self.rewind(3)
 		s = SvnSandbox(self.defs['sandbox'])
 		self.assertEquals(
-			['2','3','4'], s.pendingUpdates())
+			self.revisions[-3:], s.pendingUpdates())
 
 	def test_guilty(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)
-		self.x('svn up -r1 %(sandbox)s') # go to r1
+		self.rewind(3)
 		s = SvnSandbox(self.defs['sandbox'])
 		self.assertEquals(
 			[
@@ -87,7 +101,7 @@ class SvnSandboxTest(unittest.TestCase) :
 		self.addFile('remoteAdd', False)
 		self.removeFile('remoteRemove', False)
 		self.commitAll("State we want to update to")
-		self.x('svn up -r1 %(sandbox)s') # going back
+		self.rewind(1)
 
 		# local modifications
 		self.addRevisions('localChange', 1, False)
@@ -133,7 +147,7 @@ class SvnSandboxTest(unittest.TestCase) :
 	def test_hasPendingChanges_whenPendingModification(self) :
 		self.addFile('remoteChange')
 		self.addRevisions('remoteChange',1)
-		self.x('svn up -r1 %(sandbox)s') # going back
+		self.rewind(1)
 
 		s = SvnSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
@@ -141,14 +155,14 @@ class SvnSandboxTest(unittest.TestCase) :
 	def test_hasPendingChanges_whenPendingRemove(self) :
 		self.addFile('remoteRemove')
 		self.removeFile('remoteRemove')
-		self.x('svn up -r1 %(sandbox)s') # going back
+		self.rewind(1)
 
 		s = SvnSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
 	def test_hasPendingChanges_whenPendingAdd(self) :
 		self.addFile('remoteAdd')
-		self.x('svn up -r0 %(sandbox)s') # going back
+		self.rewind(1)
 
 		s = SvnSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
