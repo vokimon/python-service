@@ -84,9 +84,8 @@ class SvnSandboxTest(unittest.TestCase) :
 		s = SvnSandbox(self.defs['sandbox'])
 		self.assertEquals(
 			[
-				('2','myuser',"change 0 of file"),
-				('3','myuser',"change 1 of file"),
-				('4','myuser',"change 2 of file"),
+				(rev, 'myuser', "change %i of file"%i)
+				for i, rev in enumerate(self.revisions[-3:])
 			], s.guilty())
 
 	def test_pendingChanges(self) :

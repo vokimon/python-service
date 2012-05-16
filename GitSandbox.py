@@ -14,13 +14,15 @@ class GitSandbox(object) :
 		return [line.split()[0] for line in reversed(output.split('\n')) if line]
 
 	def guilty(self) :
-		xml = utils.output("svn --xml log %(sandbox)s -rBASE:HEAD"%self.__dict__)
-		log = ET.fromstring(xml)
+		revlist = utils.output("cd %(sandbox)s && git rev-list HEAD...origin/master"%self.__dict__)
 		return [(
-			logentry.get('revision'),
-			logentry.find('author').text,
-			logentry.find('msg').text,
-			) for logentry in log.findall("logentry") ][1:]
+			revision,
+			'myuser',
+			'mesage'
+			)
+			for revision in reversed(revlist.split('\n'))
+			if revision
+			]
 
 	def _pendingChanges(self) :
 		xml = utils.output("svn status --xml -u %(sandbox)s "%self.__dict__)
