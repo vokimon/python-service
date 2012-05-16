@@ -6,68 +6,86 @@ import os
 import unittest
 
 class GitSandboxTest(unittest.TestCase) :
+	def s(self, command) :
+		return self.x("cd %(sandbox)s && " + command)
 	def x(self, command) :
 		return utils.run(command%self.defs)
 	def inSandbox(self, file) :
 		return os.path.join(self.defs['sandbox'],file)
 	def addFile(self, file, commit=True) :
-		self.x('touch %%(sandbox)s/%s'%file)
-		self.x('git add %%(sandbox)s/%s'%file)
+		self.s('touch %s'%file)
+		self.s('git add %s'%file)
 		if commit :
-			self.x('git commit %%(sandbox)s/%s -m"added %s"'%(file,file))
+			self.commitFile(file, "added %s" % file)
 	def removeFile(self, file, commit=True) :
-		self.x('git rm %%(sandbox)s/%s'%file)
+		self.s('git rm %s'%file)
 		if commit :
-			self.x('git commit %%(sandbox)s/%s -m"removed %s"'%(file,file))
+			self.commitFile(file, "removed %s" % file)
 	def addRevisions(self, file, n, commit=True) :
 		for i in xrange(n) :
-			self.x('echo Change %s >> %%(sandbox)s/%s'%(i,file))
+			self.s('echo Change %s >> %s'%(i,file))
 			if commit :
-				self.x('git commit %%(sandbox)s/%s -m"change %i of %s"'%(file,i,file))
-	def commitAll(self, message) :
-		self.x('cd %%(sandbox)s && git commit . -a -m"%s"'%(message))
+				self.commitFile(file,"change %i of %s"%(i,file))
+	def pushRevision(self) :
+		self.revisions.append(file("%(sandbox)s/.git/refs/heads/master"%self.defs).read().strip())
 
+	def commitFile(self, file, message) :
+		self.s('git commit %s -m"%s"'%(file,message))
+		self.s('git push origin master')
+		self.pushRevision()
+
+	def commitAll(self, message) :
+		self.s('git commit -a -m"%s"'%(message))
+		self.s('git push origin master')
+		self.pushRevision()
+
+	def rewind(self, revisions=1) :
+		self.s('git reset --hard HEAD~%i' % revisions)
 
 	def setUp(self) :
 		self.defs = dict(
 			username = "myuser",
 			testdir = os.path.join(os.getcwd(),'testdir'),
 			repo    = os.path.join(os.getcwd(),'testdir/repo'),
-			sandbox = os.path.join(os.getcwd(),'testdir/sandbox1'),
+			#sandbox = os.path.join(os.getcwd(),'testdir/sandbox1'),
+			sandbox = '/tmp/testdir/sandbox1',
 			)
 		self.x('rm -rf %(testdir)s')
+		self.x('rm -rf /tmp/testdir')
 		self.x('mkdir -p %(testdir)s')
+		self.revisions = []
 		self.x('git init --bare %(repo)s')
 		# TODO: User name
 		self.x('git clone %(repo)s %(sandbox)s')
-		self.x('cd %(sandbox)s && touch initialfile')
-		self.x('cd %(sandbox)s && git add initialfile')
+		self.s('touch initialfile')
+		self.s('git add initialfile')
+		self.commitAll('added initialfile')
+		self.s('git push origin master')
 
 	def tearDown(self) :
 		""" """
-		self.x('cd %(sandbox)s && git log %(sandbox)s')
+#		self.s('git log ')
 		self.x('rm -rf %(testdir)s')
+		self.x('rm -rf /tmp/testdir')
 
 	def test_init(self) :
 		pass
 
-	def _test_state(self) :
+	def test_state(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)
 		s = GitSandbox(self.defs['sandbox'])
-		self.assertEquals('0', s.state())
-		self.x('svn up %(sandbox)s') # go to HEAD
-		self.assertEquals('4', s.state())
-		self.x('svn up -r1 %(sandbox)s') # go to r1
-		self.assertEquals('1', s.state())
+		self.assertEquals(self.revisions[4], s.state())
+		self.rewind(3)
+		self.assertEquals(self.revisions[1], s.state())
 
-	def _test_pendingCommits(self) :
+	def test_pendingCommits(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)
-		self.x('svn up -r1 %(sandbox)s') # go to r1
+		self.rewind(3)
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertEquals(
-			['2','3','4'], s.pendingUpdates())
+			self.revisions[-3:], s.pendingUpdates())
 
 	def _test_guilty(self) :
 		self.addFile('file')

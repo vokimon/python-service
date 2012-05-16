@@ -10,16 +10,11 @@ class GitSandbox(object) :
 		self.sandbox = sandbox
 
 	def state(self) :
-		xml = utils.output("svn --xml info %(sandbox)s"%self.__dict__)
-		info = ET.fromstring(xml)
-		return info.find("entry").get('revision')
-		# text based implementation (needs LANG and risky)
-		return utils.output("LANG=C svn info %(sandbox)s | grep ^Revision: "%self.__dict__).split()[-1]
+		return file("%s/.git/refs/heads/master"%self.sandbox).read().strip()
 
 	def pendingUpdates(self) :
-		xml = utils.output("svn --xml log %(sandbox)s -rBASE:HEAD"%self.__dict__)
-		log = ET.fromstring(xml)
-		return [logentry.get('revision') for logentry in log.findall("logentry") ][1:]
+		output = utils.output('cd %(sandbox)s && git log HEAD..origin/master --pretty=oneline'%self.__dict__)
+		return [line.split()[0] for line in reversed(output.split('\n')) if line]
 
 	def guilty(self) :
 		xml = utils.output("svn --xml log %(sandbox)s -rBASE:HEAD"%self.__dict__)
