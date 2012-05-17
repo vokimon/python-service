@@ -1,6 +1,10 @@
 #!/usr/bin/python
 
 import utils
+import os.path
+
+def debug(arg) :
+	print "\033[33m",arg,"\033[0m"
 
 class GitSandbox(object) :
 	def __init__(self, sandbox ) :
@@ -25,20 +29,49 @@ class GitSandbox(object) :
 			]
 
 	def _pendingChanges(self) :
-		xml = utils.output("svn status --xml -u %(sandbox)s "%self.__dict__)
-		log = ET.fromstring(xml)
-		result = []
-		def get(elementOrNot, xmlProperty) :
-			return 'none' if elementOrNot is None else elementOrNot.get(xmlProperty, 'none')
-		for entry in log.getiterator("entry") :
-			lstatus = entry.find("wc-status")
-			rstatus = entry.find("repos-status")
-			litem = get(lstatus,'item')
-			lprop = get(lstatus,'prop')
-			ritem = get(rstatus,'item')
-			rprop = get(rstatus,'prop')
-			result.append( ( entry.get('path'), ( litem, lprop, ritem, rprop)))
-		return result
+		def listChanges(revisions) :
+			return [
+				line.split('\t')[::-1]
+				for line in utils.output(
+					('cd %(sandbox)s && '%self.__dict__)+
+					'git diff --name-status %s'%revisions
+					).splitlines()
+				]
+		originChanges = dict(listChanges("HEAD..origin/master"))
+		localChanges = dict(listChanges("HEAD"))
+		cachedChanges = dict(listChanges("--cached"))
+		output = dict([
+			(file, ['none','none','none','none'])
+			for file in  set(originChanges.keys() + localChanges.keys() + cachedChanges.keys())
+			])
+
+		for file, status in localChanges.iteritems() :
+			if file in cachedChanges :
+				output[file][0]= dict(
+					A='added',
+					D='deleted',
+#					M='Mmodified', # No test case for it
+					).get(status,status+cachedChanges[file]+"???")
+			else :
+				output[file][0]= dict(
+#					A='Radded', # No test case for it
+					D='missing',
+					M='modified',
+					).get(status,status+"???!")
+
+		for file, status in originChanges.iteritems() :
+			output[file][2]= dict(
+				A='added',
+				D='deleted',
+				M='modified',
+				).get(status,status+"???")
+			if status in ('MD') :
+				output[file][0] = 'normal'
+
+		return [
+			(os.path.join(self.sandbox,file), tuple(value))
+			for file, value in sorted(output.iteritems())
+			]
 
 	def hasPendingChanges(self) :
 		for path, (litem, lprop, ritem, rprop) in self._pendingChanges() :

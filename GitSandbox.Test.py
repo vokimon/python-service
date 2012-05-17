@@ -23,7 +23,7 @@ class GitSandboxTest(unittest.TestCase) :
 			self.commitFile(file, "removed %s" % file)
 	def addRevisions(self, file, n, commit=True) :
 		for i in xrange(n) :
-			self.s('echo Change %s >> %s'%(i,file))
+			self.s('echo "Change %s to %s" >> %s'%(i,file, file))
 			if commit :
 				self.commitFile(file,"change %i of %s"%(i,file))
 	def pushRevision(self) :
@@ -95,7 +95,7 @@ class GitSandboxTest(unittest.TestCase) :
 				for i, rev in enumerate(self.revisions[-3:])
 			], s.guilty())
 
-	def _test_pendingChanges(self) :
+	def test_pendingChanges(self) :
 		self.addFile('remoteChange', False)
 		self.addFile('remoteRemove', False)
 		self.addFile('localRemove', False)
@@ -120,11 +120,13 @@ class GitSandboxTest(unittest.TestCase) :
 		self.maxDiff = None
 		self.assertEquals(
 			[
-				(self.defs['sandbox'],           ('normal', 'none', 'modified', 'none')),
+				# The directory is not marked changed on git, it was on svn
+#				(self.defs['sandbox'],           ('normal', 'none', 'modified', 'none')),
 				(self.inSandbox('localAdd'),     ('added', 'none', 'none', 'none')),
 				(self.inSandbox('localChange'),  ('modified', 'none', 'none', 'none')),
 				(self.inSandbox('localRemove'),  ('deleted', 'none', 'none', 'none')),
-				(self.inSandbox('nonsvnAdd'),    ('unversioned', 'none', 'none', 'none')),
+				# Untracked files are not part of this report, it was on svn
+#				(self.inSandbox('nonsvnAdd'),    ('unversioned', 'none', 'none', 'none')),
 				(self.inSandbox('nonsvnRemove'), ('missing', 'none', 'none', 'none')),
 				(self.inSandbox('remoteAdd'),    ('none', 'none', 'added', 'none')),
 				(self.inSandbox('remoteChange'), ('normal', 'none', 'modified', 'none')),
@@ -132,7 +134,7 @@ class GitSandboxTest(unittest.TestCase) :
 
 			], sorted(s._pendingChanges()))
 
-	def _test_hasPendingChanges_whenNoPendingChanges(self) :
+	def test_hasPendingChanges_whenNoPendingChanges(self) :
 		self.addFile('remoteChange', False)
 		self.addFile('remoteRemove', False)
 		self.addFile('localRemove', False)
@@ -143,14 +145,14 @@ class GitSandboxTest(unittest.TestCase) :
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertFalse(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenMissingFile(self) :
+	def test_hasPendingChanges_whenMissingFile(self) :
 		self.addFile('nonsvnRemove')
 		self.x('rm %(sandbox)s/nonsvnRemove')
 
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenPendingModification(self) :
+	def test_hasPendingChanges_whenPendingModification(self) :
 		self.addFile('remoteChange')
 		self.addRevisions('remoteChange',1)
 		self.rewind(1)
@@ -158,7 +160,7 @@ class GitSandboxTest(unittest.TestCase) :
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenPendingRemove(self) :
+	def test_hasPendingChanges_whenPendingRemove(self) :
 		self.addFile('remoteRemove')
 		self.removeFile('remoteRemove')
 		self.rewind(1)
@@ -166,14 +168,14 @@ class GitSandboxTest(unittest.TestCase) :
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenPendingAdd(self) :
+	def test_hasPendingChanges_whenPendingAdd(self) :
 		self.addFile('remoteAdd')
 		self.rewind(1)
 
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertTrue(s.hasPendingChanges())
 
-	def _test_hasPendingChanges_whenLocalChanges(self) :
+	def test_hasPendingChanges_whenLocalChanges(self) :
 		self.addFile('localRemove', False)
 		self.addFile('localChange', False)
 		self.commitAll("State were we want to go back")
