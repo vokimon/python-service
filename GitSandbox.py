@@ -14,13 +14,13 @@ class GitSandbox(object) :
 		return [line.split()[0] for line in reversed(output.split('\n')) if line]
 
 	def guilty(self) :
-		revlist = utils.output("cd %(sandbox)s && git rev-list HEAD...origin/master"%self.__dict__)
-		return [(
-			revision,
-			'myuser',
-			'mesage'
+		revisions = utils.output(
+			('cd %(sandbox)s && '%self.__dict__)+
+			'git log --pretty="format:%H\t%an <%ae>\t%s" HEAD...origin/master'
 			)
-			for revision in reversed(revlist.split('\n'))
+		return [
+			tuple(revision.split('\t',2))
+			for revision in reversed(revisions.split('\n'))
 			if revision
 			]
 

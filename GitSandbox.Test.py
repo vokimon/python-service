@@ -29,11 +29,11 @@ class GitSandboxTest(unittest.TestCase) :
 	def pushRevision(self) :
 		self.revisions.append(file("%(sandbox)s/.git/refs/heads/master"%self.defs).read().strip())
 	def commitFile(self, file, message) :
-		self.s('git commit %s -m"%s"'%(file,message))
+		self.s('git commit --author "%%(username)s" %s -m"%s"'%(file,message))
 		self.s('git push origin master')
 		self.pushRevision()
 	def commitAll(self, message) :
-		self.s('git commit -a -m"%s"'%(message))
+		self.s('git commit --author "%%(username)s" -a -m"%s"'%(message))
 		self.s('git push origin master')
 		self.pushRevision()
 	def rewind(self, revisions=1) :
@@ -41,7 +41,7 @@ class GitSandboxTest(unittest.TestCase) :
 
 	def setUp(self) :
 		self.defs = dict(
-			username = "myuser",
+			username = "My User <myuser@domain.net>",
 			testdir = os.path.join(os.getcwd(),'testdir'),
 			repo    = os.path.join(os.getcwd(),'testdir/repo'),
 			#sandbox = os.path.join(os.getcwd(),'testdir/sandbox1'),
@@ -91,7 +91,7 @@ class GitSandboxTest(unittest.TestCase) :
 		s = GitSandbox(self.defs['sandbox'])
 		self.assertEquals(
 			[
-				(rev, 'myuser', "change %i of file"%i)
+				(rev, self.defs['username'], "change %i of file"%i)
 				for i, rev in enumerate(self.revisions[-3:])
 			], s.guilty())
 
