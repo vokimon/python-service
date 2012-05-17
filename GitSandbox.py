@@ -14,13 +14,15 @@ class GitSandbox(object) :
 		return file("%s/.git/refs/heads/master"%self.sandbox).read().strip()
 
 	def pendingUpdates(self) :
-		output = utils.output('cd %(sandbox)s && git log HEAD..ORIG_HEAD --pretty=oneline'%self.__dict__)
+#		utils.run('cd %(sandbox)s && git fetch'%self.__dict__)
+		output = utils.output('cd %(sandbox)s && git log HEAD..origin/master --pretty=oneline'%self.__dict__)
 		return [line.split()[0] for line in reversed(output.split('\n')) if line]
 
 	def guilty(self) :
+#		utils.run('cd %(sandbox)s && git fetch'%self.__dict__)
 		revisions = utils.output(
 			('cd %(sandbox)s && '%self.__dict__)+
-			'git log --pretty="format:%H\t%an <%ae>\t%s" HEAD...ORIG_HEAD'
+			'git log --pretty="format:%H\t%an <%ae>\t%s" HEAD...origin/master'
 			)
 		return [
 			tuple(revision.split('\t',2))
@@ -29,6 +31,7 @@ class GitSandbox(object) :
 			]
 
 	def _pendingChanges(self) :
+#		utils.run('cd %(sandbox)s && git fetch'%self.__dict__)
 		def listChanges(revisions) :
 			return [
 				line.split('\t')[::-1]
@@ -37,7 +40,7 @@ class GitSandbox(object) :
 					'git diff --name-status %s'%revisions
 					).splitlines()
 				]
-		originChanges = dict(listChanges("HEAD..ORIG_HEAD"))
+		originChanges = dict(listChanges("HEAD..origin/master"))
 		localChanges = dict(listChanges("HEAD"))
 		cachedChanges = dict(listChanges("--cached"))
 		output = dict([

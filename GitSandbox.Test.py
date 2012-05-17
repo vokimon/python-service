@@ -52,9 +52,9 @@ class GitSandboxTest(unittest.TestCase) :
 		self.x('mkdir -p %(testdir)s')
 		self.revisions = []
 		self.x('git init --bare %(repo)s')
-		# TODO: User name
 		self.x('git clone %(repo)s %(sandbox)s')
 		self.s('touch initialfile')
+		# create branch in remote
 		self.s('git add initialfile')
 		self.commitAll('added initialfile')
 		self.s('git push origin master')
