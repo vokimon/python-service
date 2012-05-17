@@ -83,10 +83,12 @@ def run(command, message=None, log=sys.stdout, err=None, fatal=True) :
 	if fatal and process.returncode : die("Failed, exit code %i"%process.returncode, process.returncode)
 	return process.returncode != 0
 
-def output(command, message=None) :
-	if message :
-		print "\033[32m== %s\033[0m"%(message)
-	return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE).communicate()[0] 
+def output(command, message=None, fatal=True) :
+	print "\033[32m== Output of: %s\033[0m"%(message or command)
+	proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+	output = proc.communicate()[0]
+	if fatal and proc.returncode : die("Failed, exit code %i"%proc.returncode, proc.returncode)
+	return output
 
 def hasOption(option) :
 	if option not in sys.argv :
