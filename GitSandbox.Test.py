@@ -76,6 +76,32 @@ class GitSandboxTest(unittest.TestCase) :
 		self.rewind(3)
 		self.assertEquals(self.revisions[1], s.state())
 
+	def test_remoteState(self) :
+		self.addFile('file')
+		self.addRevisions('file',3)
+		s = GitSandbox(self.defs['sandbox'])
+		self.assertEquals(self.revisions[4], s.remoteState())
+		self.rewind(3)
+		self.assertEquals(self.revisions[4], s.remoteState())
+
+	def test_update(self) :
+		self.addFile('file')
+		self.addRevisions('file',3)
+		s = GitSandbox(self.defs['sandbox'])
+		self.rewind(3)
+		s.update()
+		self.assertEquals(self.revisions[4], s.state())
+
+	def test_update_withConflictPostpones(self) :
+		self.addFile('file')
+		self.addRevisions('file',3)
+		s = GitSandbox(self.defs['sandbox'])
+		self.rewind(2)
+		self.addRevisions('file',1, False) # local conflicting change
+		s.update()
+		self.assertEquals(self.revisions[4], s.state())
+		# TODO: Check that file is left in conflict
+
 	def test_pendingCommits(self) :
 		self.addFile('file')
 		self.addRevisions('file',3)

@@ -11,11 +11,20 @@ class GitSandbox(object) :
 		self.sandbox = sandbox
 
 	def state(self) :
-		return file("%s/.git/refs/heads/master"%self.sandbox).read().strip()
+		return utils.output("cd %(sandbox)s && git  log --pretty=format:'%%H' -n 1 HEAD"%self.__dict__)
+
+	def remoteState(self) :
+		utils.run('cd %(sandbox)s && git fetch'%self.__dict__)
+		return utils.output("cd %(sandbox)s && git  log --pretty=format:'%%H' -n 1 FETCH_HEAD"%self.__dict__)
+
+	def update(self) :
+		utils.run('cd %(sandbox)s && git stash'%self.__dict__)
+		utils.run('cd %(sandbox)s && git pull'%self.__dict__)
+		utils.run('cd %(sandbox)s && git stash apply || true'%self.__dict__)
 
 	def pendingUpdates(self) :
 		utils.run('cd %(sandbox)s && git fetch'%self.__dict__)
-		output = utils.output('cd %(sandbox)s && git log HEAD..FETCH_HEAD --pretty=oneline'%self.__dict__)
+		output = utils.output('cd %(sandbox)s && git log --pretty=oneline HEAD..FETCH_HEAD'%self.__dict__)
 		return [line.split()[0] for line in reversed(output.split('\n')) if line]
 
 	def guilty(self) :

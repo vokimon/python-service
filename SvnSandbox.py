@@ -8,6 +8,7 @@ import utils
 class SvnSandbox(object) :
 	def __init__(self, sandbox ) :
 		self.sandbox = sandbox
+		self.conflictResolution = 'postpone'
 
 	def state(self) :
 		xml = utils.output("svn --xml info %(sandbox)s"%self.__dict__)
@@ -15,6 +16,16 @@ class SvnSandbox(object) :
 		return info.find("entry").get('revision')
 		# text based implementation (needs LANG and risky)
 		return utils.output("LANG=C svn info %(sandbox)s | grep ^Revision: "%self.__dict__).split()[-1]
+
+	def remoteState(self) :
+		xml = utils.output("svn --xml info -rHEAD %(sandbox)s"%self.__dict__)
+		info = ET.fromstring(xml)
+		return info.find("entry").get('revision')
+		# text based implementation (needs LANG and risky)
+		return utils.output("LANG=C svn info %(sandbox)s | grep ^Revision: "%self.__dict__).split()[-1]
+
+	def update(self, revision=None) :
+		utils.run("svn up --accept %(conflictResolution)s %(sandbox)s"%self.__dict__)
 
 	def pendingUpdates(self) :
 		xml = utils.output("svn --xml log %(sandbox)s -rBASE:HEAD"%self.__dict__)
