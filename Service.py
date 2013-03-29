@@ -110,13 +110,13 @@ class Service :
 		"""
 		try :
 			return f(self,request)
-		except HttpError, e :
+		except HttpError as e :
 			return webob.Response(
 				"%s: %s\n"%(e.__class__.__name__, e.message),
 				status = e.status,
 				content_type ='text/plain',
 				)
-		except Exception, e :
+		except Exception as e :
 			return webob.Response(
 				"%s: %s\n"%(e.__class__.__name__, e),
 				status = "500 Internal Server Error",

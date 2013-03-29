@@ -105,15 +105,15 @@ class ServiceTest(unittest.TestCase) :
 			if headers is not None :
 				headers = headers.format(bodysize=len(requestBody))
 				self.assertEquals(headers, str(req.headers))
-		except urllib2.HTTPError, e :
-			print e.read()
+		except urllib2.HTTPError as e :
+			print (e.read())
 			raise
 
 	def assertError(self, query, code, body=None, headers=None, post=None) :
 		try :
 			res = self.request(query, post)
 			self.fail("HTTP error expected. Received '%s'"%res.read())
-		except urllib2.HTTPError,e :
+		except urllib2.HTTPError as e :
 			requestBody = e.read()
 			if body is not None :
 				self.assertEquals(body, requestBody)
@@ -260,7 +260,7 @@ class ServiceTest(unittest.TestCase) :
 	def testFunctionKeyword_withParams(self) :
 		self.assertContent(
 			"TestingService/FunctionKeyword?a=1&b=2",
-			body = "{'a': u'1', 'b': u'2'}",
+			body = "{u'a': u'1', u'b': u'2'}",
 			headers = self.headerPlainText(),
 			)
 
