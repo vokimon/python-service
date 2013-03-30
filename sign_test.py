@@ -193,9 +193,31 @@ class SignatureValidatorTest(unittest.TestCase) :
 	def test_validateMessage_whenNoClientInMessage(self) :
 		s = SignatureValidator()
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
-			s.validateClientMessage(boo='lalala')
+			s.validateClientMessage(
+				project='project1',
+				boo='lalala',
+				)
 		self.assertEqual(
 			"Client not specified in message"
+			, cm.exception.message)
+
+	def test_validateMessage_whenNoProjectInMessage(self) :
+		s = SignatureValidator()
+		with self.assertRaises(SignatureValidator.SignatureError) as cm:
+			s.validateClientMessage(client='client1')
+		self.assertEqual(
+			"Project not specified in message"
+			, cm.exception.message)
+
+	def test_validateMessage_whenBadProject(self) :
+		s = SignatureValidator()
+		with self.assertRaises(SignatureValidator.SignatureError) as cm:
+			s.validateClientMessage(
+				project="badproject",
+				client="badclient",
+				)
+		self.assertEqual(
+			"Project or client not registered in server"
 			, cm.exception.message)
 
 	def test_validateMessage_whenBadClient(self) :
@@ -206,7 +228,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 				client="badclient",
 				)
 		self.assertEqual(
-			"Client not registered in server"
+			"Project or client not registered in server"
 			, cm.exception.message)
 
 	def test_validateMessage_whenNoSignature(self) :

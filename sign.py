@@ -77,6 +77,8 @@ class SignatureValidator(object) :
 		return self._clientKeys[name]
 
 	def validateClientMessage(self, signature='', **kwds) :
+		if 'project' not in kwds :
+			self._validationFailed("Project not specified in message")
 		if 'client' not in kwds :
 			self._validationFailed("Client not specified in message")
 
@@ -84,7 +86,7 @@ class SignatureValidator(object) :
 		project = kwds['project']
 
 		if (project,client) not in self._clientKeys :
-			self._validationFailed("Client not registered in server")
+			self._validationFailed("Project or client not registered in server")
 
 		if not signature :
 			self._validationFailed("Message not signed")
