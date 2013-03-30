@@ -292,7 +292,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 			client="client1",
 			)
 		signed = self.signed(**message)
-		signed['new key'] = "unsigned value"
+		signed['new key'] = "different value"
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
 			s.validateClientMessage(**signed)
 		self.assertEqual(
