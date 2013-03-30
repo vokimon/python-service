@@ -4,7 +4,6 @@ from Crypto.Hash import MD5
 from Crypto.PublicKey import RSA
 from Crypto import Random
 
-
 """
 projects
 	- Name
@@ -70,7 +69,7 @@ class SignatureValidator(object) :
 		raise SignatureValidator.SignatureError(message)
 
 	def _md5(self, **kwds) :
-		plaintext = str(kwds)
+		plaintext = repr(kwds)
 		return MD5.new(plaintext).digest()
 
 
@@ -93,7 +92,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 
 	def testDefault_noClient(self) :
 		s = SignatureValidator()
-		self.assertEquals(
+		self.assertEqual(
 			[]
 			, s.clients())
 
@@ -103,10 +102,10 @@ class SignatureValidatorTest(unittest.TestCase) :
 			name = "A client", 
 			publicKey = self.publicKey,
 			)
-		self.assertEquals(
+		self.assertEqual(
 			["A client"]
 			, s.clients())
-		self.assertEquals(
+		self.assertEqual(
 			self.publicKey,
 			s.clientKey("A client")
 		)
@@ -115,7 +114,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 		s = SignatureValidator()
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
 			s.validateClientMessage(boo='lalala')
-		self.assertEquals(
+		self.assertEqual(
 			"Client not specified in message"
 			, str(cm.exception))
 
@@ -125,7 +124,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 			s.validateClientMessage(
 				client="badclient",
 				)
-		self.assertEquals(
+		self.assertEqual(
 			"Client not registered in server"
 			, str(cm.exception))
 
@@ -139,7 +138,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 			s.validateClientMessage(
 				client="A client",
 				)
-		self.assertEquals(
+		self.assertEqual(
 			"Message not signed"
 			, str(cm.exception))
 
@@ -155,7 +154,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 			)
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
 			s.validateClientMessage(**message)
-		self.assertEquals(
+		self.assertEqual(
 			"Invalid signature"
 			, str(cm.exception))
 
@@ -169,7 +168,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 			client="A client",
 			)
 		result = s.validateClientMessage(**self.signed(**message))
-		self.assertEquals(
+		self.assertEqual(
 			True
 			, result)
 
@@ -186,7 +185,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 		signed['new key'] = "unsigned value"
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
 			s.validateClientMessage(**signed)
-		self.assertEquals(
+		self.assertEqual(
 			"Invalid signature"
 			, str(cm.exception))
 
@@ -202,18 +201,22 @@ class SignatureValidatorTest(unittest.TestCase) :
 		signed = self.signed(**message)
 		signed['client'] = "A client"
 		result = s.validateClientMessage(**signed)
-		self.assertEquals(
+		self.assertEqual(
 			True
 			, result)
 
 
-class MessageSigner(unittest.TestCase) :
-	def __init__(self) :
+class MessageSigner(object) :
+	def __init__(self, privateKey) :
+		self.privateKey = RSA.importKey(privateKey)
+
+	def sign(self, **kwds) :
 		rng = Random.new().read
-		self.RSAkey = RSA.generate(1024, rng)
-		self.publicKey = self.RSAkey.publickey().exportKey()
-		self.privateKey = self.RSAkey.exportKey()
-	pass
+		plaintext = str(kwds)
+		hash = MD5.new(plaintext).digest()
+		signature = self.privateKey.sign(hash, rng)
+		kwds.update(signature=signature)
+		return kwds
 
 class MessageSignerTest(unittest.TestCase) :
 	def setUp(self) :
@@ -222,16 +225,39 @@ class MessageSignerTest(unittest.TestCase) :
 		self.publicKey = self.RSAkey.publickey().exportKey()
 		self.privateKey = self.RSAkey.exportKey()
 
-	def signed(self, **kwds) :
-		rng = Random.new().read
-		plaintext = str(kwds)
-		hash = MD5.new(plaintext).digest()
-		signature = self.RSAkey.sign(hash, rng)
-		kwds.update(signature=signature)
-		return kwds
+	def isValid(self, **signed) :
+		def md5(**kwds) :
+			plaintext = repr(kwds)
+			return MD5.new(plaintext).digest()
+
+		key = RSA.importKey(self.publicKey)
+		signature = signed['signature']
+		del signed['signature']
+		hash = md5(**signed)
+		return key.verify(hash, signature)
+
+	def test_right(self) :
+		signer = MessageSigner(self.privateKey)
+		message = dict(
+			key1="value1",
+			key2=[4,5,3,"hola"],
+			)
+		result = signer.sign(**message)
+		self.assertTrue("signature" in result)
+		self.assertTrue(self.isValid(**result))
+
+	def test_wrong(self) :
+		signer = MessageSigner(self.privateKey)
+		message = dict(
+			key1="value1",
+			key2=[4,5,3,"hola"],
+			)
+		result = signer.sign(**message)
+		result.update(extraKey="extravalue")
+		self.assertFalse(self.isValid(**result))
 
 
-
-unittest.main()
+if __name__ == "__main__" :
+	unittest.main()
 
 
