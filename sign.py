@@ -4,6 +4,7 @@ from Crypto.Hash import MD5
 from Crypto.PublicKey import RSA
 from Crypto import Random
 import os
+import glob
 
 class FSClientKeyRing(object) :
 	"""
@@ -17,7 +18,7 @@ class FSClientKeyRing(object) :
 	def _keypath(self, key) :
 		project, client = key
 		return os.path.join(
-			self.path, project, client+".pubkey")
+			self.path, project, client, "pubkey")
 		
 	def __setitem__(self, key, value) :
 		try :
@@ -36,6 +37,13 @@ class FSClientKeyRing(object) :
 	def __contains__(self, key) :
 		project, client = key
 		return os.access(self._keypath(key), os.R_OK)
+
+	def keys(self) :
+		return [
+			tuple(item.split("/")[-3:-1])
+			for item in glob.glob(
+				self._keypath(("*","*")))
+			]
 
 class MessageSigner(object) :
 	def __init__(self, privateKey) :
@@ -56,11 +64,11 @@ class SignatureValidator(object) :
 	the 'signature' of the rest of the key values.
 	"""
 
-	def __init__(self) :
-		self._clientKeys = {}
+	def __init__(self, keyring={}) :
+		self._clientKeys = keyring
 
-	def addClient(self, name, publicKey) :
-		self._clientKeys[name] = publicKey
+	def addClient(self, project, client, publicKey) :
+		self._clientKeys[project,client] = publicKey
 
 	def clients(self) :
 		return self._clientKeys.keys()
@@ -73,15 +81,16 @@ class SignatureValidator(object) :
 			self._validationFailed("Client not specified in message")
 
 		client = kwds['client']
+		project = kwds['project']
 
-		if client not in self._clientKeys :
+		if (project,client) not in self._clientKeys :
 			self._validationFailed("Client not registered in server")
 
 		if not signature :
 			self._validationFailed("Message not signed")
 
 		hash = self._md5(**kwds)
-		keyimport = RSA.importKey(self._clientKeys[client])
+		keyimport = RSA.importKey(self._clientKeys[project,client])
 		if not keyimport.verify(hash, signature) :
 			self._validationFailed("Invalid signature")
 

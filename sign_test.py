@@ -9,6 +9,8 @@ from sign import FSClientKeyRing
 import os
 import unittest
 
+# TODO: Project not specified in message
+
 class ClientKeyRingTest(unittest.TestCase) :
 	"""This TestCase is to ensure that FSClientKeyRing
 	has the same behaviour than a dictionary as key ring.
@@ -41,15 +43,29 @@ class ClientKeyRingTest(unittest.TestCase) :
 			self.assertEqual(e.message,
 				('project1', 'client1'))
 
+	def test_keys(self) :
+		ring = self.keyRing()
+		ring["project1","client1"] = "inventedkey1"
+		ring["project2","client1"] = "inventedkey2"
+		ring["project2","client2"] = "inventedkey3"
+		self.assertEqual(sorted(ring.keys()), [
+			("project1","client1"),
+			("project2","client1"),
+			("project2","client2"),
+			])
+
 class FSClientKeyRingTest(ClientKeyRingTest) :
 	def setUp(self) :
 		try :
 			os.system("rm -rf fixture")
-		except Exception, e: 
+		except Exception, e:
 			print e
 		os.mkdir("fixture")
 		os.mkdir("fixture/project1")
 		os.mkdir("fixture/project1/client1")
+		os.mkdir("fixture/project2")
+		os.mkdir("fixture/project2/client1")
+		os.mkdir("fixture/project2/client2")
 
 	def tearDown(self) :
 		os.system("rm -rf fixture")
@@ -70,12 +86,25 @@ class FSClientKeyRingTest(ClientKeyRingTest) :
 		ring = self.keyRing()
 		self.assertFalse(("badproject","client1") in ring)
 
+
 class MessageSignerTest(unittest.TestCase) :
 	def setUp(self) :
+		try :
+			os.system("rm -rf fixture")
+		except Exception as e: 
+			print (e)
+
+		os.mkdir("fixture")
+		os.mkdir("fixture/project1")
+		os.mkdir("fixture/project1/client1")
+
 		self.RSAkey = RSA.generate(1024)
 		self.publicKey = self.RSAkey.publickey().exportKey()
 		self.privateKey = self.RSAkey.exportKey()
 
+	def tearDown(self) :
+		os.system("rm -rf fixture")
+		
 	def isValid(self, **signed) :
 		def md5(**kwds) :
 			plaintext = repr(kwds)
@@ -120,6 +149,19 @@ class SignatureValidatorTest(unittest.TestCase) :
 		self.RSAkey = RSA.generate(1024)
 		self.publicKey = self.RSAkey.publickey().exportKey()
 		self.privateKey = self.RSAkey.exportKey()
+		try :
+			os.system("rm -rf fixture")
+		except Exception, e: 
+			print e
+		os.mkdir("fixture")
+		os.mkdir("fixture/project1")
+		os.mkdir("fixture/project1/client1")
+		os.mkdir("fixture/project2")
+		os.mkdir("fixture/project2/client1")
+		os.mkdir("fixture/project2/client2")
+
+	def tearDown(self) :
+		os.system("rm -rf fixture")
 
 	def signed(self, **kwds) :
 		plaintext = repr(kwds)
@@ -128,24 +170,24 @@ class SignatureValidatorTest(unittest.TestCase) :
 		kwds.update(signature=signature)
 		return kwds
 
-	def testDefault_noClient(self) :
+	def test_default_noClient(self) :
 		s = SignatureValidator()
 		self.assertEqual(
 			[]
 			, s.clients())
 
 	def test_addClientKey(self) :
-		s = SignatureValidator()
+		s = SignatureValidator(FSClientKeyRing("fixture"))
 		s.addClient(
-			name = "A client", 
+			"project1","client1",
 			publicKey = self.publicKey,
 			)
-		self.assertEqual(
-			["A client"]
-			, s.clients())
+		self.assertEqual([
+			("project1","client1"),
+			], s.clients())
 		self.assertEqual(
 			self.publicKey,
-			s.clientKey("A client")
+			s.clientKey(("project1","client1")),
 		)
 
 	def test_validateMessage_whenNoClientInMessage(self) :
@@ -160,6 +202,7 @@ class SignatureValidatorTest(unittest.TestCase) :
 		s = SignatureValidator()
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
 			s.validateClientMessage(
+				project="project1",
 				client="badclient",
 				)
 		self.assertEqual(
@@ -169,12 +212,14 @@ class SignatureValidatorTest(unittest.TestCase) :
 	def test_validateMessage_whenNoSignature(self) :
 		s = SignatureValidator()
 		s.addClient(
-			name = "A client", 
+			project = "project1",
+			client="client1",
 			publicKey = self.publicKey,
 			)
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
 			s.validateClientMessage(
-				client="A client",
+				project = "project1",
+				client="client1",
 				)
 		self.assertEqual(
 			"Message not signed"
@@ -183,11 +228,13 @@ class SignatureValidatorTest(unittest.TestCase) :
 	def test_validateMessage_whenBadSignature(self) :
 		s = SignatureValidator()
 		s.addClient(
-			name = "A client",
+			project = "project1",
+			client="client1",
 			publicKey = self.publicKey,
 			)
 		message = dict(
-			client="A client",
+			project = "project1",
+			client="client1",
 			signature = [1L,2L,3L,4L],
 			)
 		with self.assertRaises(SignatureValidator.SignatureError) as cm:
@@ -199,11 +246,13 @@ class SignatureValidatorTest(unittest.TestCase) :
 	def test_validateMessage_whenGoodSignature(self) :
 		s = SignatureValidator()
 		s.addClient(
-			name = "A client",
+			project = "project1",
+			client="client1",
 			publicKey = self.publicKey,
 			)
 		message = dict(
-			client="A client",
+			project = "project1",
+			client="client1",
 			)
 		result = s.validateClientMessage(**self.signed(**message))
 		self.assertEqual(
@@ -213,11 +262,12 @@ class SignatureValidatorTest(unittest.TestCase) :
 	def test_validateMessage_afterModified(self) :
 		s = SignatureValidator()
 		s.addClient(
-			name = "A client",
+			"project1","client1",
 			publicKey = self.publicKey,
 			)
 		message = dict(
-			client="A client",
+			project = "project1",
+			client="client1",
 			)
 		signed = self.signed(**message)
 		signed['new key'] = "unsigned value"
@@ -230,14 +280,16 @@ class SignatureValidatorTest(unittest.TestCase) :
 	def test_validateMessage_afterSettingWithTheSameValue(self) :
 		s = SignatureValidator()
 		s.addClient(
-			name = "A client",
+			project = "project1",
+			client="client1",
 			publicKey = self.publicKey,
 			)
 		message = dict(
-			client="A client",
+			project = "project1",
+			client="client1",
 			)
 		signed = self.signed(**message)
-		signed['client'] = "A client"
+		signed['client'] = "client1"
 		result = s.validateClientMessage(**signed)
 		self.assertEqual(
 			True
